@@ -1,0 +1,14 @@
+name: NaturalInteraction
+version: 1.0-SNAPSHOT
+main: com.natural.interaction.NaturalInteraction
+api-version: 1.21
+authors: [Antigravity]
+description: Advanced NPC Interaction Plugin
+depend: [Citizens]
+softdepend: [ProtocolLib]
+
+commands:
+  interaction:
+    description: Main command for interactions
+    usage: /interaction <subcommand>
+    aliases: [inter, ni]
