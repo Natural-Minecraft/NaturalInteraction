@@ -31,7 +31,7 @@ public class ChatUtils {
         StringBuffer buffer = new StringBuffer();
         while (matcher.find()) {
             try {
-                matcher.appendReplacement(buffer, net.md_5.api.ChatColor.of("#" + matcher.group(1)).toString());
+                matcher.appendReplacement(buffer, net.md_5.bungee.api.ChatColor.of("#" + matcher.group(1)).toString());
             } catch (Exception e) {
                 matcher.appendReplacement(buffer, Matcher.quoteReplacement(matcher.group()));
             }

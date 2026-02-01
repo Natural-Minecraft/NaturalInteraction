@@ -115,6 +115,11 @@ public class StoryManager {
         return playerProgress.computeIfAbsent(player.getUniqueId(), k -> new PlayerStoryData(k, "start_node"));
     }
 
+    public void startStory(Player player, String nodeId) {
+        playerProgress.put(player.getUniqueId(), new PlayerStoryData(player.getUniqueId(), nodeId));
+        saveProgress();
+    }
+
     public void advanceStory(Player player) {
         PlayerStoryData data = getPlayerData(player);
         StoryNode current = storyNodes.get(data.getCurrentNodeId());

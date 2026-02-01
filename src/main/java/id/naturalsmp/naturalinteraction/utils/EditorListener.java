@@ -45,7 +45,7 @@ public class EditorListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (ChatUtils.serialize(event.view().title()).contains("Story Editor")) {
+        if (ChatUtils.serialize(event.getView().title()).contains("Story Editor")) {
             event.setCancelled(true);
             // Handle menu clicks here (navigation to List/Create)
         }
