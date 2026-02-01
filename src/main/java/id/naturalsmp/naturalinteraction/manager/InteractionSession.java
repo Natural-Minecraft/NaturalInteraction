@@ -140,7 +140,7 @@ public class InteractionSession {
 
     private void executeActions(DialogueNode node) {
         for (Action action : node.getActions()) {
-            id.naturalsmp.naturalinteraction.util.ActionExecutor.execute(player, action);
+            id.naturalsmp.naturalinteraction.utils.ActionExecutor.execute(player, action);
         }
     }
     

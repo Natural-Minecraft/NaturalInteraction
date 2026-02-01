@@ -129,7 +129,7 @@ public class NodeEditorGUI extends GUI {
         if (slot == 10) { // Text
             player.closeInventory();
             player.sendMessage(Component.text("Enter new dialogue text in chat (or 'cancel'):", NamedTextColor.GREEN));
-            id.naturalsmp.naturalinteraction.util.ChatInput.capture(plugin, player, (input) -> {
+            id.naturalsmp.naturalinteraction.utils.ChatInput.capture(plugin, player, (input) -> {
                 if (!input.equalsIgnoreCase("cancel")) {
                     node.setText(input);
                     plugin.getInteractionManager().saveInteraction(interaction);

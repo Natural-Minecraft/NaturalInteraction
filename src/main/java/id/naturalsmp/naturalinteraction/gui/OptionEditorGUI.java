@@ -93,7 +93,7 @@ public class OptionEditorGUI extends GUI {
             // Add Option
             player.closeInventory();
             player.sendMessage(Component.text("Enter option text (or 'cancel'):", NamedTextColor.GREEN));
-            id.naturalsmp.naturalinteraction.util.ChatInput.capture(plugin, player, (text) -> {
+            id.naturalsmp.naturalinteraction.utils.ChatInput.capture(plugin, player, (text) -> {
                 if (text.equalsIgnoreCase("cancel")) {
                     new OptionEditorGUI(plugin, player, interaction, node).open();
                     return;

@@ -3,8 +3,9 @@ package id.naturalsmp.naturalinteraction;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import id.naturalsmp.naturalinteraction.story.StoryManager;
 import id.naturalsmp.naturalinteraction.commands.InteractionCommand;
-import id.naturalsmp.naturalinteraction.interaction.manager.InteractionManager;
-import id.naturalsmp.naturalinteraction.interaction.hook.CitizensHook;
+import id.naturalsmp.naturalinteraction.manager.InteractionManager;
+import id.naturalsmp.naturalinteraction.hook.CitizensHook;
+import id.naturalsmp.naturalinteraction.npc.StoryNPCManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class NaturalInteraction extends JavaPlugin {
@@ -40,10 +41,10 @@ public final class NaturalInteraction extends JavaPlugin {
         getServer().getPluginManager()
                 .registerEvents(new id.naturalsmp.naturalinteraction.utils.EditorListener(this), this);
         getServer().getPluginManager()
-                .registerEvents(new id.naturalsmp.naturalinteraction.interaction.listener.InteractionListener(this),
+                .registerEvents(new id.naturalsmp.naturalinteraction.listener.InteractionListener(this),
                         this);
         getServer().getPluginManager()
-                .registerEvents(new id.naturalsmp.naturalinteraction.interaction.gui.GUIListener(), this);
+                .registerEvents(new id.naturalsmp.naturalinteraction.gui.GUIListener(), this);
 
         // Commands
         getCommand("interaction").setExecutor(new InteractionCommand(this));

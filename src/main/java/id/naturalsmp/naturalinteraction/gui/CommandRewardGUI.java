@@ -2,7 +2,7 @@ package id.naturalsmp.naturalinteraction.gui;
 
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import id.naturalsmp.naturalinteraction.model.Interaction;
-import id.naturalsmp.naturalinteraction.util.ChatInput;
+import id.naturalsmp.naturalinteraction.utils.ChatInput;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;

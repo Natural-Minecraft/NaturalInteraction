@@ -99,7 +99,7 @@ public class ActionEditorGUI extends GUI {
                 if (type == ActionType.TELEPORT) player.sendMessage(Component.text("Format: x,y,z,world,yaw,pitch (Type 'here' for current loc)", NamedTextColor.GRAY));
                 if (type == ActionType.EFFECT) player.sendMessage(Component.text("Format: TYPE,duration(s),amplifier", NamedTextColor.GRAY));
                 
-                id.naturalsmp.naturalinteraction.util.ChatInput.capture(plugin, player, (input) -> {
+                id.naturalsmp.naturalinteraction.utils.ChatInput.capture(plugin, player, (input) -> {
                     if (!input.equalsIgnoreCase("cancel")) {
                         String value = input;
                         if (type == ActionType.TELEPORT && input.equalsIgnoreCase("here")) {
