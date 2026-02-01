@@ -8,6 +8,7 @@ public class StoryNode {
     private String title;
     private List<String> description;
     private List<StoryObjective> objectives;
+    private List<StoryChoice> choices;
     private String nextNodeId;
 
     public StoryNode(String id, String title) {
@@ -15,6 +16,7 @@ public class StoryNode {
         this.title = title;
         this.description = new ArrayList<>();
         this.objectives = new ArrayList<>();
+        this.choices = new ArrayList<>();
     }
 
     public String getId() {
@@ -45,6 +47,14 @@ public class StoryNode {
         this.objectives.add(objective);
     }
 
+    public List<StoryChoice> getChoices() {
+        return choices;
+    }
+
+    public void addChoice(StoryChoice choice) {
+        this.choices.add(choice);
+    }
+
     public String getNextNodeId() {
         return nextNodeId;
     }
@@ -56,16 +66,14 @@ public class StoryNode {
     public static class StoryObjective {
         private String description;
         private ObjectiveType type;
-        private String targetId; // NPC UUID, Mob Type, or Material
+        private String targetId;
         private int requiredAmount;
-        private int currentAmount;
 
         public StoryObjective(String description, ObjectiveType type, String targetId, int amount) {
             this.description = description;
             this.type = type;
             this.targetId = targetId;
             this.requiredAmount = amount;
-            this.currentAmount = 0;
         }
 
         public String getDescription() {
@@ -83,17 +91,23 @@ public class StoryNode {
         public int getRequiredAmount() {
             return requiredAmount;
         }
+    }
 
-        public int getCurrentAmount() {
-            return currentAmount;
+    public static class StoryChoice {
+        private String text;
+        private String nextNodeId;
+
+        public StoryChoice(String text, String nextNodeId) {
+            this.text = text;
+            this.nextNodeId = nextNodeId;
         }
 
-        public void setCurrentAmount(int amount) {
-            this.currentAmount = amount;
+        public String getText() {
+            return text;
         }
 
-        public boolean isCompleted() {
-            return currentAmount >= requiredAmount;
+        public String getNextNodeId() {
+            return nextNodeId;
         }
     }
 }

@@ -73,15 +73,29 @@ public class StoryManager {
             for (String uuidStr : section.getKeys(false)) {
                 UUID uuid = UUID.fromString(uuidStr);
                 String currentNodeId = progressConfig.getString("players." + uuidStr + ".current-node");
-                playerProgress.put(uuid, new PlayerStoryData(uuid, currentNodeId));
+                PlayerStoryData data = new PlayerStoryData(uuid, currentNodeId);
+
+                ConfigurationSection objProg = progressConfig
+                        .getConfigurationSection("players." + uuidStr + ".objective-progress");
+                if (objProg != null) {
+                    for (String key : objProg.getKeys(false)) {
+                        data.setObjectiveProgress(Integer.parseInt(key),
+                                progressConfig.getInt("players." + uuidStr + ".objective-progress." + key));
+                    }
+                }
+                playerProgress.put(uuid, data);
             }
         }
     }
 
     public void saveProgress() {
         for (Map.Entry<UUID, PlayerStoryData> entry : playerProgress.entrySet()) {
-            progressConfig.set("players." + entry.getKey().toString() + ".current-node",
-                    entry.getValue().getCurrentNodeId());
+            String path = "players." + entry.getKey().toString();
+            progressConfig.set(path + ".current-node", entry.getValue().getCurrentNodeId());
+            progressConfig.set(path + ".objective-progress", null); // Clear
+            for (Map.Entry<Integer, Integer> prog : entry.getValue().getObjectiveProgress().entrySet()) {
+                progressConfig.set(path + ".objective-progress." + prog.getKey(), prog.getValue());
+            }
         }
         try {
             progressConfig.save(progressFile);
@@ -97,14 +111,26 @@ public class StoryManager {
         return storyNodes.get(data.getCurrentNodeId());
     }
 
-    public void startStory(Player player, String nodeId) {
-        playerProgress.put(player.getUniqueId(), new PlayerStoryData(player.getUniqueId(), nodeId));
-        saveProgress();
+    public PlayerStoryData getPlayerData(Player player) {
+        return playerProgress.computeIfAbsent(player.getUniqueId(), k -> new PlayerStoryData(k, "start_node"));
+    }
+
+    public void advanceStory(Player player) {
+        PlayerStoryData data = getPlayerData(player);
+        StoryNode current = storyNodes.get(data.getCurrentNodeId());
+        if (current != null && current.getNextNodeId() != null) {
+            data.setCurrentNodeId(current.getNextNodeId());
+            data.getObjectiveProgress().clear();
+            saveProgress();
+            player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent("<green>Quest Upgraded: <gold>" + storyNodes.get(current.getNextNodeId()).getTitle()));
+        }
     }
 
     public static class PlayerStoryData {
         private final UUID playerUUID;
         private String currentNodeId;
+        private final Map<Integer, Integer> objectiveProgress = new HashMap<>();
 
         public PlayerStoryData(UUID playerUUID, String currentNodeId) {
             this.playerUUID = playerUUID;
@@ -117,6 +143,14 @@ public class StoryManager {
 
         public void setCurrentNodeId(String id) {
             this.currentNodeId = id;
+        }
+
+        public Map<Integer, Integer> getObjectiveProgress() {
+            return objectiveProgress;
+        }
+
+        public void setObjectiveProgress(int index, int amount) {
+            objectiveProgress.put(index, amount);
         }
     }
 }
