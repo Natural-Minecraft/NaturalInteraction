@@ -1,0 +1,24 @@
+story:
+  start_node:
+    title: "<gradient:#FFD700:#FFA500>A New Beginning</gradient>"
+    description:
+      - "<gray>Welcome to NaturalSMP!"
+      - "<gray>Speak with the Elder to begin your journey."
+    objectives:
+      obj1:
+        description: "Talk to Elder"
+        type: TALK_TO_NPC
+        target: "0" # NPC ID or Name
+        amount: 1
+    next-node: "collect_init"
+  collect_init:
+    title: "<green>Survival Basics"
+    description:
+      - "<gray>Gather some materials for your first house."
+    objectives:
+      obj1:
+        description: "Collect 16 Oak Logs"
+        type: COLLECT_ITEMS
+        target: "OAK_LOG"
+        amount: 16
+    next-node: "complete"

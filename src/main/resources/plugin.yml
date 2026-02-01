@@ -1,11 +1,11 @@
 name: NaturalInteraction
-version: 1.0-SNAPSHOT
-main: com.natural.interaction.NaturalInteraction
+version: 1.0.0
+main: id.naturalsmp.naturalinteraction.NaturalInteraction
 api-version: 1.21
-authors: [Antigravity]
-description: Advanced NPC Interaction Plugin
-depend: [Citizens]
-softdepend: [ProtocolLib]
+authors: [NaturalSMP]
+description: Advanced RPG Story and NPC Interaction System
+depend: [Citizens, NaturalCore]
+softdepend: [ProtocolLib, NaturalPass]
 
 commands:
   interaction:
