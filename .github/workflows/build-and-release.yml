@@ -44,7 +44,7 @@ jobs:
             Automated Production Build from NaturalSMP CI/CD.
             Last Build Time: ${{ github.event.head_commit.timestamp }}
             Commit: ${{ github.sha }}
-          files: target/${{ steps.info.outputs.artifact_name }}-${{ steps.info.outputs.artifact_version }}.jar
+          files: target/${{ steps.info.outputs.artifact_name }}.jar
           generate_release_notes: true
           make_latest: true
           draft: false
