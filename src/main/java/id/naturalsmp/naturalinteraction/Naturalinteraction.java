@@ -3,7 +3,8 @@ package id.naturalsmp.naturalinteraction;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import id.naturalsmp.naturalinteraction.story.StoryManager;
 import id.naturalsmp.naturalinteraction.commands.InteractionCommand;
-import id.naturalsmp.naturalinteraction.npc.StoryNPCManager;
+import id.naturalsmp.naturalinteraction.interaction.manager.InteractionManager;
+import id.naturalsmp.naturalinteraction.interaction.hook.CitizensHook;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class NaturalInteraction extends JavaPlugin {
@@ -11,6 +12,7 @@ public final class NaturalInteraction extends JavaPlugin {
     private static NaturalInteraction instance;
     private StoryManager storyManager;
     private StoryNPCManager npcManager;
+    private InteractionManager interactionManager;
 
     @Override
     public void onEnable() {
@@ -22,6 +24,10 @@ public final class NaturalInteraction extends JavaPlugin {
         // Managers
         this.storyManager = new StoryManager(this);
         this.npcManager = new StoryNPCManager(this);
+        this.interactionManager = new InteractionManager(this);
+
+        // Citizens
+        CitizensHook.registerTraits(this);
 
         // PAPI
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -33,6 +39,11 @@ public final class NaturalInteraction extends JavaPlugin {
                 .registerEvents(new id.naturalsmp.naturalinteraction.story.StoryListener(storyManager), this);
         getServer().getPluginManager()
                 .registerEvents(new id.naturalsmp.naturalinteraction.utils.EditorListener(this), this);
+        getServer().getPluginManager()
+                .registerEvents(new id.naturalsmp.naturalinteraction.interaction.listener.InteractionListener(this),
+                        this);
+        getServer().getPluginManager()
+                .registerEvents(new id.naturalsmp.naturalinteraction.interaction.gui.GUIListener(), this);
 
         // Commands
         getCommand("interaction").setExecutor(new InteractionCommand(this));
@@ -58,5 +69,9 @@ public final class NaturalInteraction extends JavaPlugin {
 
     public StoryNPCManager getNpcManager() {
         return npcManager;
+    }
+
+    public InteractionManager getInteractionManager() {
+        return interactionManager;
     }
 }
