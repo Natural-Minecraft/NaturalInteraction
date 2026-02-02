@@ -1,0 +1,10 @@
+# NaturalInteraction Configuration
+
+# General settings
+settings:
+  debug: false
+  
+# Placeholder for future settings
+interaction:
+  default-range: 3.0
+  cooldown: 1.0
