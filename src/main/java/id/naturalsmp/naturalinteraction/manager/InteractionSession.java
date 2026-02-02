@@ -196,7 +196,8 @@ public class InteractionSession {
                             org.bukkit.Location playerLoc = player.getLocation();
                             org.bukkit.Location npcLoc = npc.getStoredLocation().clone().add(0, 1.5, 0); // Aim for head
 
-                            java.util.Vector direction = npcLoc.toVector().subtract(playerLoc.toVector()).normalize();
+                            org.bukkit.util.Vector direction = npcLoc.toVector().subtract(playerLoc.toVector())
+                                    .normalize();
                             playerLoc.setDirection(direction);
                             player.teleport(playerLoc,
                                     org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN);
