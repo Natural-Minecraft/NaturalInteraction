@@ -11,8 +11,23 @@ public class GUIListener implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (event.getInventory().getHolder() instanceof GUI) {
             GUI gui = (GUI) event.getInventory().getHolder();
+
             if (!gui.isInteractable()) {
                 event.setCancelled(true);
+            } else {
+                // For interactable GUIs (like ItemRewardGUI), we still want to block
+                // some potentially exploitative actions globally.
+                switch (event.getAction()) {
+                    case COLLECT_TO_CURSOR, MOVE_TO_OTHER_INVENTORY, HOTBAR_SWAP, HOTBAR_MOVE_AND_READD -> {
+                        // If clicking in top inventory, block these moves
+                        if (event.getClickedInventory() != null
+                                && event.getClickedInventory().equals(event.getInventory())) {
+                            event.setCancelled(true);
+                        }
+                    }
+                    default -> {
+                    }
+                }
             }
             gui.handleClick(event);
         }
@@ -27,7 +42,7 @@ public class GUIListener implements Listener {
             }
         }
     }
-    
+
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         if (event.getInventory().getHolder() instanceof GUI) {

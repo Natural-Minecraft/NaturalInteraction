@@ -1,0 +1,81 @@
+{
+    "id": "fishing_story",
+    "rootNodeId": "greet",
+    "nodes": {
+        "greet": {
+            "id": "greet",
+            "text": "Halo kawan! Kamu terlihat seperti pemancing handal. Bisa bantu orang tua ini?",
+            "options": [
+                {
+                    "text": "Tentu, ada apa?",
+                    "targetNodeId": "explanation"
+                },
+                {
+                    "text": "Maaf, aku sibuk.",
+                    "targetNodeId": "decline"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_VILLAGER_AMBIENT,1.0,1.0"
+                },
+                {
+                    "type": "ZOOM",
+                    "value": "true"
+                }
+            ],
+            "durationSeconds": 10
+        },
+        "explanation": {
+            "id": "explanation",
+            "text": "Cincin kawinku jatuh ke danau ini... Aku sudah terlalu tua untuk menyelam. Bisa kamu pancingkan untukku?",
+            "options": [
+                {
+                    "text": "Akan kucoba!",
+                    "targetNodeId": "accept"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10
+        },
+        "accept": {
+            "id": "accept",
+            "text": "Terima kasih! Ini peta area di mana aku menjatuhkannya. Semoga beruntung!",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ITEM",
+                    "value": "FILLED_MAP,1,&ePeta Cincin Hilang"
+                },
+                {
+                    "type": "ACTIONBAR",
+                    "value": "&aQuest Aktif: Mencari Cincin Kakek"
+                },
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                },
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_PLAYER_LEVELUP,1.0,1.2"
+                }
+            ],
+            "durationSeconds": 5
+        },
+        "decline": {
+            "id": "decline",
+            "text": "Ah, baiklah... Mungkin ada pemancing lain yang lewat nanti.",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                }
+            ],
+            "durationSeconds": 5
+        }
+    },
+    "rewards": [],
+    "commandRewards": []
+}

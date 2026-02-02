@@ -7,5 +7,7 @@ public enum ActionType {
     SOUND, // value: "SOUND_NAME,volume,pitch"
     TITLE, // value: "Title;Subtitle"
     MESSAGE, // value: "Message text"
-    ZOOM // value: "true" (on) or "false" (off)
+    ZOOM, // value: "true" (on) or "false" (off)
+    ITEM, // value: "MATERIAL,amount,name"
+    ACTIONBAR // value: "Message text"
 }

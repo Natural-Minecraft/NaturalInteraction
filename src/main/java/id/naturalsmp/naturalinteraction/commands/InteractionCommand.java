@@ -135,6 +135,24 @@ public class InteractionCommand implements CommandExecutor {
                 plugin.getInteractionManager().deleteInteraction(args[1]);
                 player.sendMessage(ChatColor.GREEN + "Deleted interaction '" + args[1] + "'.");
                 break;
+            case "spawnfish":
+                if (!player.hasPermission("naturalinteraction.admin"))
+                    return true;
+                org.bukkit.Location shore = id.naturalsmp.naturalinteraction.utils.LocationUtils
+                        .findNearestShoreline(player.getLocation(), 32);
+                if (shore == null) {
+                    player.sendMessage(ChatUtils.toComponent("<red>Tidak menemukan pinggiran air di sekitarmu!"));
+                    return true;
+                }
+                NPC kakek = CitizensAPI.getNPCRegistry().createNPC(org.bukkit.entity.EntityType.PLAYER, "Kakek Tua");
+                kakek.spawn(shore);
+                if (!kakek.hasTrait(InteractionTrait.class)) {
+                    kakek.addTrait(InteractionTrait.class);
+                }
+                kakek.getTrait(InteractionTrait.class).setInteractionId("fishing_story");
+                player.sendMessage(
+                        ChatUtils.toComponent("<green>Kakek Tua telah muncul di pinggir air! Cek sekitarmu."));
+                break;
             default:
                 sendHelp(player);
                 break;
@@ -158,6 +176,7 @@ public class InteractionCommand implements CommandExecutor {
             player.sendMessage(ChatUtils.toComponent("<gray>/ni edit <name> - Edit dialogue"));
             player.sendMessage(ChatUtils.toComponent("<gray>/ni bind <name> - Bind dialogue to NPC"));
             player.sendMessage(ChatUtils.toComponent("<gray>/ni delete <name> - Delete dialogue"));
+            player.sendMessage(ChatUtils.toComponent("<gray>/ni spawnfish - Dynamic spawn Fishing Story NPC"));
         }
     }
 }

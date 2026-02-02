@@ -16,10 +16,12 @@ import java.time.Duration;
 public class ActionExecutor {
 
     public static void execute(Player player, Action action) {
-        if (action == null || action.getType() == null) return;
-        
+        if (action == null || action.getType() == null)
+            return;
+
         String value = action.getValue();
-        if (value == null) value = "";
+        if (value == null)
+            value = "";
 
         try {
             switch (action.getType()) {
@@ -65,12 +67,12 @@ public class ActionExecutor {
                     String[] titleParts = value.split(";");
                     String titleText = titleParts[0];
                     String subtitleText = titleParts.length > 1 ? titleParts[1] : "";
-                    
+
                     Title title = Title.title(
-                        Component.text(titleText),
-                        Component.text(subtitleText),
-                        Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3000), Duration.ofMillis(1000))
-                    );
+                            Component.text(titleText),
+                            Component.text(subtitleText),
+                            Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3000),
+                                    Duration.ofMillis(1000)));
                     player.showTitle(title);
                     break;
                 case MESSAGE:
@@ -82,6 +84,29 @@ public class ActionExecutor {
                     } else {
                         player.removePotionEffect(PotionEffectType.SLOWNESS);
                     }
+                    break;
+                case ITEM:
+                    String[] itemParts = value.split(",");
+                    if (itemParts.length >= 1) {
+                        org.bukkit.Material mat = org.bukkit.Material.matchMaterial(itemParts[0].toUpperCase());
+                        int amount = itemParts.length > 1 ? Integer.parseInt(itemParts[1]) : 1;
+                        if (mat != null) {
+                            org.bukkit.inventory.ItemStack is = new org.bukkit.inventory.ItemStack(mat, amount);
+                            if (itemParts.length > 2) {
+                                org.bukkit.inventory.meta.ItemMeta meta = is.getItemMeta();
+                                if (meta != null) {
+                                    meta.displayName(
+                                            id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(itemParts[2]));
+                                    is.setItemMeta(meta);
+                                }
+                            }
+                            player.getInventory().addItem(is);
+                        }
+                    }
+                    break;
+                case ACTIONBAR:
+                    player.sendActionBar(id.naturalsmp.naturalinteraction.utils.ChatUtils
+                            .toComponent(value.replace("%player%", player.getName())));
                     break;
             }
         } catch (Exception e) {
