@@ -35,7 +35,18 @@ public final class NaturalInteraction extends JavaPlugin {
             new id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion(this).register();
         }
 
-        // Listeners
+        registerEvents();
+
+        // Commands
+        InteractionCommand cmd = new InteractionCommand(this);
+        getCommand("interaction").setExecutor(cmd);
+        getCommand("interaction").setTabCompleter(cmd);
+
+        getLogger().info(
+                ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>has been enabled!"));
+    }
+
+    private void registerEvents() {
         getServer().getPluginManager()
                 .registerEvents(new id.naturalsmp.naturalinteraction.story.StoryListener(storyManager), this);
         getServer().getPluginManager()
@@ -45,12 +56,16 @@ public final class NaturalInteraction extends JavaPlugin {
                         this);
         getServer().getPluginManager()
                 .registerEvents(new id.naturalsmp.naturalinteraction.gui.GUIListener(), this);
+    }
 
-        // Commands
-        getCommand("interaction").setExecutor(new InteractionCommand(this));
-
-        getLogger().info(
-                ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>has been enabled!"));
+    public void reloadPlugin() {
+        reloadConfig();
+        if (storyManager != null) {
+            storyManager.loadNodes();
+        }
+        if (interactionManager != null) {
+            interactionManager.loadInteractions();
+        }
     }
 
     @Override

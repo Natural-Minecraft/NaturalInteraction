@@ -18,7 +18,7 @@ public class InteractionManager {
 
     // Cooldown and One-time reward tracking
     private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
-    
+
     public InteractionManager(NaturalInteraction plugin) {
         this.plugin = plugin;
         this.interactionsFolder = new File(plugin.getDataFolder(), "interactions");
@@ -32,11 +32,13 @@ public class InteractionManager {
 
     public void loadInteractions() {
         interactions.clear();
-        if (!interactionsFolder.exists()) return;
-        
+        if (!interactionsFolder.exists())
+            return;
+
         File[] files = interactionsFolder.listFiles((dir, name) -> name.endsWith(".json"));
-        if (files == null) return;
-        
+        if (files == null)
+            return;
+
         for (File file : files) {
             try (java.io.FileReader reader = new java.io.FileReader(file)) {
                 Interaction interaction = gson.fromJson(reader, Interaction.class);
@@ -65,19 +67,23 @@ public class InteractionManager {
     public Interaction getInteraction(String id) {
         return interactions.get(id);
     }
-    
+
     public boolean hasInteraction(String id) {
         return interactions.containsKey(id);
     }
-    
+
+    public java.util.Set<String> getInteractionIds() {
+        return interactions.keySet();
+    }
+
     /* Session Management */
-    
+
     public void startInteraction(Player player, String interactionId) {
         if (activeSessions.containsKey(player.getUniqueId())) {
             player.sendMessage(ChatColor.RED + "You are already in an interaction!");
             return;
         }
-        
+
         Interaction interaction = getInteraction(interactionId);
         if (interaction == null) {
             player.sendMessage(ChatColor.RED + "Interaction not found: " + interactionId);
@@ -94,7 +100,7 @@ public class InteractionManager {
         activeSessions.put(player.getUniqueId(), session);
         session.start();
     }
-    
+
     public void endInteraction(UUID uuid) {
         InteractionSession session = activeSessions.remove(uuid);
         // Clean up if needed
@@ -103,13 +109,14 @@ public class InteractionManager {
     public InteractionSession getSession(UUID uuid) {
         return activeSessions.get(uuid);
     }
-    
+
     public void createInteraction(String name) {
-        if (interactions.containsKey(name)) return;
+        if (interactions.containsKey(name))
+            return;
         Interaction interaction = new Interaction(name);
         saveInteraction(interaction);
     }
-    
+
     public void deleteInteraction(String name) {
         interactions.remove(name);
     }

@@ -158,4 +158,8 @@ public class StoryManager {
             objectiveProgress.put(index, amount);
         }
     }
+
+    public java.util.Set<String> getStoryNodeIds() {
+        return storyNodes.keySet();
+    }
 }
