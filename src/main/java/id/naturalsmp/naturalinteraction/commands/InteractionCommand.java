@@ -1,5 +1,6 @@
 package id.naturalsmp.naturalinteraction.commands;
 
+import id.naturalsmp.naturalinteraction.commands.SubCommand;
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import id.naturalsmp.naturalinteraction.commands.subs.*;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
