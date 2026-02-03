@@ -59,6 +59,8 @@ public class ItemRewardGUI extends GUI {
     @Override
     public void handleClick(InventoryClickEvent event) {
         int slot = event.getRawSlot();
+        if (slot < 0)
+            return;
 
         // 1. Protect Bottom Row (Management Buttons)
         if (slot >= 45 && slot < 54) {
@@ -73,35 +75,13 @@ public class ItemRewardGUI extends GUI {
             return;
         }
 
-        // 2. Prevent item theft from the GUI (Top Inventory)
-        // If clicking in top inventory and trying to move item to player inv
-        // (Shift-Click)
+        // 2. Extra logic for the Top Inventory
         if (event.getClickedInventory() != null && event.getClickedInventory().equals(inventory)) {
-            if (event.isShiftClick()) {
+            // Already cancelled TAKING actions in GUIListener.
+            // But we want to allow DELETE via Right-Click or Shift-Click from TOP
+            if (event.isRightClick() || event.isShiftClick()) {
                 event.setCancelled(true);
-                // To "remove" a reward via shift-click, just clear the slot
                 inventory.setItem(slot, null);
-                return;
-            }
-
-            // If they are taking an item (not placing)
-            // We allow them to pick it up, but it will be removed from GUI if they take it.
-            // Spigot handles the move if we don't cancel.
-            // The actual "Theft" happens if they take it out and keep it in their
-            // inventory.
-
-            // Fix: If it's a PICKUP action from GUI, we allow it but it's technically a
-            // "take".
-            // To be 100% safe, we can cancel and instead just clear the slot.
-            if (event.getCursor().getType() == Material.AIR && event.getCurrentItem() != null) {
-                // Option: Cancel and let them "pick up" a COPY, or just cancel and clear.
-                // User wants to prevent "taking", so let's cancel the move out.
-
-                // If you want to let them REMOVE items, right-click to delete is better
-                if (event.isRightClick()) {
-                    event.setCancelled(true);
-                    inventory.setItem(slot, null);
-                }
             }
         }
     }

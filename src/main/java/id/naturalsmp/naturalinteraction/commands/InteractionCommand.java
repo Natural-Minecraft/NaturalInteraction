@@ -48,7 +48,7 @@ public class InteractionCommand implements CommandExecutor {
             case "editor":
                 if (!player.hasPermission("naturalinteraction.admin"))
                     return true;
-                new AdminGUIEditor(plugin).openMainMenu(player);
+                new id.naturalsmp.naturalinteraction.gui.AdminEditorGUI(plugin, player).open();
                 break;
             case "wand":
                 if (!player.hasPermission("naturalinteraction.admin"))

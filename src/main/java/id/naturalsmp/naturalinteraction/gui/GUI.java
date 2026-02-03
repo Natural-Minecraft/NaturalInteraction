@@ -22,7 +22,8 @@ public abstract class GUI implements InventoryHolder {
     public GUI(NaturalInteraction plugin, Player player, int size, String title) {
         this.plugin = plugin;
         this.player = player;
-        this.inventory = Bukkit.createInventory(this, size, net.kyori.adventure.text.Component.text(title));
+        this.inventory = Bukkit.createInventory(this, size,
+                id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(title));
     }
 
     public abstract void initialize();
@@ -31,17 +32,18 @@ public abstract class GUI implements InventoryHolder {
         initialize();
         player.openInventory(inventory);
     }
-    
+
     public abstract void handleClick(InventoryClickEvent event);
 
     @Override
     public Inventory getInventory() {
         return inventory;
     }
-    
+
     public boolean isInteractable() {
         return false;
     }
-    
-    public void handleClose(InventoryCloseEvent event) {}
+
+    public void handleClose(InventoryCloseEvent event) {
+    }
 }
