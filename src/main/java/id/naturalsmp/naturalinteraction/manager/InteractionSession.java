@@ -89,20 +89,33 @@ public class InteractionSession {
         player.sendMessage(Component.empty());
 
         // SHOW TITLE (Cinematic)
-        // If text is long, show as subtitle. If short, show as title.
-        if (rawText.length() < 30) {
-            player.showTitle(net.kyori.adventure.title.Title.title(
-                    coloredText,
-                    Component.empty(),
-                    net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(200),
-                            java.time.Duration.ofMillis(3000), java.time.Duration.ofMillis(500))));
+        String[] words = rawText.split(" ");
+        Component titleComponent;
+        Component subtitleComponent = Component.empty();
+
+        if (words.length > 5) {
+            StringBuilder titleBuilder = new StringBuilder();
+            StringBuilder subtitleBuilder = new StringBuilder();
+            for (int i = 0; i < words.length; i++) {
+                if (i < 5) {
+                    titleBuilder.append(words[i]).append(" ");
+                } else {
+                    subtitleBuilder.append(words[i]).append(" ");
+                }
+            }
+            titleComponent = id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent(titleBuilder.toString().trim());
+            subtitleComponent = id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent(subtitleBuilder.toString().trim());
         } else {
-            player.showTitle(net.kyori.adventure.title.Title.title(
-                    Component.empty(),
-                    coloredText,
-                    net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(200),
-                            java.time.Duration.ofMillis(3000), java.time.Duration.ofMillis(500))));
+            titleComponent = coloredText;
         }
+
+        player.showTitle(net.kyori.adventure.title.Title.title(
+                titleComponent,
+                subtitleComponent,
+                net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(200),
+                        java.time.Duration.ofMillis(3000), java.time.Duration.ofMillis(500))));
         player.sendMessage(Component.text(""));
 
         // Display Options
@@ -197,14 +210,26 @@ public class InteractionSession {
                         String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
                                 .getInteractionId();
                         if (interaction.getId().equals(id)) {
-                            // Look at NPC
+                            // Move player to cinematic distance (2.5 blocks)
+                            org.bukkit.Location npcLoc = npc.getStoredLocation().clone();
                             org.bukkit.Location playerLoc = player.getLocation();
-                            org.bukkit.Location npcLoc = npc.getStoredLocation().clone().add(0, 1.5, 0); // Aim for head
 
-                            org.bukkit.util.Vector direction = npcLoc.toVector().subtract(playerLoc.toVector())
-                                    .normalize();
-                            playerLoc.setDirection(direction);
-                            player.teleport(playerLoc,
+                            // Calculate direction from NPC to Player
+                            org.bukkit.util.Vector dir = playerLoc.toVector().subtract(npcLoc.toVector()).normalize();
+                            if (dir.lengthSquared() == 0 || Double.isNaN(dir.getX())) {
+                                dir = npcLoc.getDirection().multiply(-1); // Fallback to NPC back direction
+                            }
+
+                            org.bukkit.Location targetLoc = npcLoc.clone().add(dir.multiply(2.5));
+
+                            // Adjust Y to find safe ground if possible
+                            targetLoc.setY(playerLoc.getY());
+
+                            // Look at NPC head
+                            org.bukkit.Location lookLoc = npcLoc.clone().add(0, 1.5, 0);
+                            targetLoc.setDirection(lookLoc.toVector().subtract(targetLoc.toVector()).normalize());
+
+                            player.teleport(targetLoc,
                                     org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN);
                             return;
                         }

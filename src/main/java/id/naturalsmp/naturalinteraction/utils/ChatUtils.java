@@ -44,7 +44,18 @@ public class ChatUtils {
     public static Component toComponent(String message) {
         if (message == null || message.isEmpty())
             return Component.empty();
-        return MINI_MESSAGE.deserialize(message);
+
+        // If it looks like MiniMessage but has legacy codes, pre-process it
+        if (message.contains("<") && (message.contains("&") || message.contains("&#"))) {
+            // This is tricky. Best approach: colorize it first, then use legacy serializer
+            return SECTION_SERIALIZER.deserialize(colorize(message));
+        }
+
+        if (message.contains("<")) {
+            return MINI_MESSAGE.deserialize(message);
+        }
+
+        return SECTION_SERIALIZER.deserialize(colorize(message));
     }
 
     public static String serialize(Component component) {

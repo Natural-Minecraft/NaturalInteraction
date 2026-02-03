@@ -58,11 +58,27 @@ public class LocationUtils {
 
     private static boolean isStandable(Block block) {
         Material type = block.getType();
-        // Standable on solid ground with air/passable above
-        return !type.isSolid() &&
-                !block.isLiquid() &&
-                block.getRelative(BlockFace.DOWN).getType().isSolid() &&
-                !block.getRelative(BlockFace.DOWN).isLiquid();
+        Block down = block.getRelative(BlockFace.DOWN);
+        Block up = block.getRelative(BlockFace.UP);
+
+        // Ground must be solid and not liquid
+        if (!down.getType().isSolid() || down.isLiquid())
+            return false;
+
+        // Feet block must be air-like, not solid, not liquid, and not waterlogged
+        if (type.isSolid() || block.isLiquid() || type == Material.WATER)
+            return false;
+
+        if (block.getBlockData() instanceof org.bukkit.block.data.Waterlogged) {
+            if (((org.bukkit.block.data.Waterlogged) block.getBlockData()).isWaterlogged())
+                return false;
+        }
+
+        // Head room must also be clear
+        if (up.getType().isSolid() || up.isLiquid())
+            return false;
+
+        return true;
     }
 
     private static Block getAdjacentWater(Block block) {
