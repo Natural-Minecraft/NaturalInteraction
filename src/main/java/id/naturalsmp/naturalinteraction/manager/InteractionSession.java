@@ -318,6 +318,7 @@ public class InteractionSession {
         double spacing = 0.4;
 
         for (int i = 0; i < node.getOptions().size(); i++) {
+            final int index = i;
             Option option = node.getOptions().get(i);
             org.bukkit.Location loc = npcBase.clone().add(0, startHeight + (i * spacing), 0);
 
@@ -340,7 +341,7 @@ public class InteractionSession {
                         ie.getPersistentDataContainer().set(
                                 new org.bukkit.NamespacedKey(plugin, "choice_index"),
                                 org.bukkit.persistence.PersistentDataType.INTEGER,
-                                i);
+                                index);
                         ie.setPersistent(false);
                     });
             choiceEntities.add(interactEntity);
