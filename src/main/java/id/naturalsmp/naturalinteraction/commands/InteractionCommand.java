@@ -84,7 +84,7 @@ public class InteractionCommand implements CommandExecutor, TabCompleter {
                 ChatUtils.toComponent("<gradient:#4facfe:#00f2fe><b>--- NaturalInteraction ---</b></gradient>"));
         subCommands.values().stream()
                 .filter(sub -> sub.getPermission() == null || sender.hasPermission(sub.getPermission()))
-                .sort(Comparator.comparing(SubCommand::getName))
+                .sorted(Comparator.comparing(SubCommand::getName))
                 .forEach(sub -> sender
                         .sendMessage(ChatUtils.toComponent("<gray>" + sub.getUsage() + " - " + sub.getDescription())));
     }
