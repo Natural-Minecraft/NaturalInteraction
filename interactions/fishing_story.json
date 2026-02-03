@@ -4,7 +4,7 @@
     "nodes": {
         "greet": {
             "id": "greet",
-            "text": "Halo kawan! Kamu terlihat seperti pemancing handal. Bisa bantu orang tua ini?",
+            "text": "&#FFAA00&lHalo kawan! &#FFFFFFKamu terlihat seperti pemancing handal. Bisa bantu orang tua ini?",
             "options": [
                 {
                     "text": "Tentu, ada apa?",
@@ -18,39 +18,44 @@
             "actions": [
                 {
                     "type": "SOUND",
-                    "value": "ENTITY_VILLAGER_AMBIENT,1.0,1.0"
+                    "value": "ENTITY_VILLAGER_AMBIENT,1.0,0.8"
                 },
                 {
                     "type": "ZOOM",
                     "value": "true"
                 }
             ],
-            "durationSeconds": 10
+            "durationSeconds": 15
         },
         "explanation": {
             "id": "explanation",
-            "text": "Cincin kawinku jatuh ke danau ini... Aku sudah terlalu tua untuk menyelam. Bisa kamu pancingkan untukku?",
+            "text": "&#FFFFFFCincin kawinku jatuh ke danau ini... Aku sudah terlalu tua untuk menyelam. Bisa kamu pancingkan untukku?",
             "options": [
                 {
                     "text": "Akan kucoba!",
                     "targetNodeId": "accept"
                 }
             ],
-            "actions": [],
-            "durationSeconds": 10
+            "actions": [
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_VILLAGER_YES,1.0,1.0"
+                }
+            ],
+            "durationSeconds": 15
         },
         "accept": {
             "id": "accept",
-            "text": "Terima kasih! Ini peta area di mana aku menjatuhkannya. Semoga beruntung!",
+            "text": "&#AAFF55&lTerima kasih! &#FFFFFFIni peta area di mana aku menjatuhkannya. Semoga beruntung!",
             "options": [],
             "actions": [
                 {
                     "type": "ITEM",
-                    "value": "FILLED_MAP,1,&ePeta Cincin Hilang"
+                    "value": "FILLED_MAP,1,&#FFFF55&lPeta Cincin Hilang"
                 },
                 {
                     "type": "ACTIONBAR",
-                    "value": "&aQuest Aktif: Mencari Cincin Kakek"
+                    "value": "&#AAFF55&lQuest Aktif: &#FFFFFFMencari Cincin Kakek"
                 },
                 {
                     "type": "ZOOM",
@@ -58,19 +63,23 @@
                 },
                 {
                     "type": "SOUND",
-                    "value": "ENTITY_PLAYER_LEVELUP,1.0,1.2"
+                    "value": "UI_TOAST_CHALLENGE_COMPLETE,1.0,1.2"
                 }
             ],
-            "durationSeconds": 5
+            "durationSeconds": 8
         },
         "decline": {
             "id": "decline",
-            "text": "Ah, baiklah... Mungkin ada pemancing lain yang lewat nanti.",
+            "text": "&#AAAAAAAh, baiklah... Mungkin ada pemancing lain yang lewat nanti.",
             "options": [],
             "actions": [
                 {
                     "type": "ZOOM",
                     "value": "false"
+                },
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_VILLAGER_NO,1.0,1.0"
                 }
             ],
             "durationSeconds": 5

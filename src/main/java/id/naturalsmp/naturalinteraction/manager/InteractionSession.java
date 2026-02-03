@@ -23,6 +23,7 @@ public class InteractionSession {
     private DialogueNode currentNode;
     private BukkitRunnable task;
     private BossBar bossBar;
+    private final java.util.List<org.bukkit.entity.Entity> choiceEntities = new java.util.ArrayList<>();
 
     public InteractionSession(NaturalInteraction plugin, Player player, Interaction interaction) {
         this.plugin = plugin;
@@ -43,10 +44,14 @@ public class InteractionSession {
             end();
             return;
         }
+        cleanupChoices();
         this.currentNode = node;
 
         // Execute Actions (Instant)
         executeActions(node);
+
+        // Typewriter Sound Effect (Cinematic)
+        player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_AMETHYST_CLUSTER_STEP, 1.0f, 1.5f);
 
         // Face NPC if possible
         faceNPC();
@@ -102,7 +107,11 @@ public class InteractionSession {
 
         // Display Options
         if (!node.getOptions().isEmpty()) {
-            player.sendMessage(Component.text("   Select an option:", NamedTextColor.GRAY));
+            player.sendMessage(Component.text("   Pilih opsi:", NamedTextColor.GRAY));
+
+            // Spawn TextDisplays for visual choice (v1.19.4+)
+            spawnVisualChoices(node);
+
             for (Option option : node.getOptions()) {
                 Component optionText = Component.text("   ➤ ", NamedTextColor.GOLD)
                         .append(Component.text(option.getText(), NamedTextColor.YELLOW,
@@ -111,14 +120,10 @@ public class InteractionSession {
                             selectOption(option);
                         }))
                         .hoverEvent(HoverEvent
-                                .showText(Component.text("Click to select this option", NamedTextColor.GREEN)));
+                                .showText(Component.text("Klik untuk memilih opsi ini", NamedTextColor.GREEN)));
                 player.sendMessage(optionText);
             }
-            player.sendMessage(Component.text(""));
-        } else {
-            // If no options, maybe a "Click to continue" hint or just wait?
-            // Hypixel often has "Click to continue" for linear dialogues if not
-            // auto-advancing
+            player.sendMessage(Component.empty());
         }
 
         player.sendMessage(
@@ -225,7 +230,7 @@ public class InteractionSession {
 
     public void selectOption(Option option) {
         if (plugin.getInteractionManager().getSession(player.getUniqueId()) != this) {
-            player.sendMessage(Component.text("This interaction has expired.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Interaksi ini telah kedaluwarsa.", NamedTextColor.RED));
             return;
         }
 
@@ -234,11 +239,18 @@ public class InteractionSession {
         playNode(interaction.getNode(option.getTargetNodeId()));
     }
 
+    public void selectOptionByIndex(int index) {
+        if (currentNode == null || index < 0 || index >= currentNode.getOptions().size())
+            return;
+        selectOption(currentNode.getOptions().get(index));
+    }
+
     public void end() {
         if (bossBar != null)
             player.hideBossBar(bossBar);
         if (task != null)
             task.cancel();
+        cleanupChoices();
         plugin.getInteractionManager().endInteraction(player.getUniqueId());
 
         // Remove Zoom if active (cleanup)
@@ -269,7 +281,69 @@ public class InteractionSession {
         }
 
         if (given) {
-            player.sendMessage(Component.text("You received rewards!", NamedTextColor.GREEN));
+            player.sendMessage(Component.text("Kamu mendapatkan hadiah!", NamedTextColor.GREEN));
+        }
+    }
+
+    private void cleanupChoices() {
+        for (org.bukkit.entity.Entity entity : choiceEntities) {
+            if (entity.isValid())
+                entity.remove();
+        }
+        choiceEntities.clear();
+    }
+
+    private void spawnVisualChoices(DialogueNode node) {
+        // Try to find the NPC location
+        org.bukkit.Location npcBase = null;
+        for (net.citizensnpcs.api.npc.NPC npc : net.citizensnpcs.api.CitizensAPI.getNPCRegistry()) {
+            if (npc.isSpawned() && npc.getStoredLocation().getWorld().equals(player.getWorld())) {
+                if (npc.getStoredLocation().distanceSquared(player.getLocation()) < 25) {
+                    if (npc.hasTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)) {
+                        String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
+                                .getInteractionId();
+                        if (interaction.getId().equals(id)) {
+                            npcBase = npc.getStoredLocation();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (npcBase == null)
+            return;
+
+        double startHeight = 2.5; // Start above NPC head
+        double spacing = 0.4;
+
+        for (int i = 0; i < node.getOptions().size(); i++) {
+            Option option = node.getOptions().get(i);
+            org.bukkit.Location loc = npcBase.clone().add(0, startHeight + (i * spacing), 0);
+
+            // 1. Spawn TextDisplay
+            org.bukkit.entity.TextDisplay textDisplay = loc.getWorld().spawn(loc, org.bukkit.entity.TextDisplay.class,
+                    td -> {
+                        td.text(id.naturalsmp.naturalinteraction.utils.ChatUtils
+                                .toComponent("&#FFAA00&l➤ &e" + option.getText()));
+                        td.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+                        td.setPersistent(false);
+                        td.setViewRange(15);
+                    });
+            choiceEntities.add(textDisplay);
+
+            // 2. Spawn Interaction Entity (Floating Click Zone)
+            org.bukkit.entity.Interaction interactEntity = loc.getWorld().spawn(loc,
+                    org.bukkit.entity.Interaction.class, ie -> {
+                        ie.setInteractionHeight(0.3f);
+                        ie.setInteractionWidth(2.0f);
+                        ie.getPersistentDataContainer().set(
+                                new org.bukkit.NamespacedKey(plugin, "choice_index"),
+                                org.bukkit.persistence.PersistentDataType.INTEGER,
+                                i);
+                        ie.setPersistent(false);
+                    });
+            choiceEntities.add(interactEntity);
         }
     }
 }

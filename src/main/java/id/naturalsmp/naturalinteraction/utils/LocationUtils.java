@@ -10,15 +10,13 @@ import java.util.List;
 
 public class LocationUtils {
 
-    /**
-     * Finds the nearest shoreline (land next to water) within a radius.
-     * 
-     * @param center The search origin
-     * @param radius The search radius
-     * @return The location of the shoreline block, or null if not found.
-     */
     public static Location findNearestShoreline(Location center, int radius) {
-        Location best = null;
+        ShorelineResult result = findSafeShoreline(center, radius);
+        return result != null ? result.landLoc : null;
+    }
+
+    public static ShorelineResult findSafeShoreline(Location center, int radius) {
+        ShorelineResult best = null;
         double minDistance = Double.MAX_VALUE;
 
         int cx = center.getBlockX();
@@ -27,15 +25,19 @@ public class LocationUtils {
 
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
-                // Scan a small Y range around player
                 for (int y = -5; y <= 5; y++) {
                     Block block = center.getWorld().getBlockAt(cx + x, cy + y, cz + z);
 
-                    if (isStandable(block) && isAdjacentToWater(block)) {
-                        double dist = center.distanceSquared(block.getLocation());
-                        if (dist < minDistance) {
-                            minDistance = dist;
-                            best = block.getLocation().add(0.5, 0, 0.5); // Center of block
+                    if (isStandable(block)) {
+                        Block water = getAdjacentWater(block);
+                        if (water != null) {
+                            double dist = center.distanceSquared(block.getLocation());
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                best = new ShorelineResult(
+                                        block.getLocation().add(0.5, 0, 0.5),
+                                        water.getLocation().add(0.5, 0, 0.5));
+                            }
                         }
                     }
                 }
@@ -44,25 +46,33 @@ public class LocationUtils {
         return best;
     }
 
+    public static class ShorelineResult {
+        public final Location landLoc;
+        public final Location waterLoc;
+
+        public ShorelineResult(Location landLoc, Location waterLoc) {
+            this.landLoc = landLoc;
+            this.waterLoc = waterLoc;
+        }
+    }
+
     private static boolean isStandable(Block block) {
-        // Must be non-solid/passable block (Air, Grass, etc)
-        // AND have a solid block below it
-        return !block.getType().isSolid() &&
+        Material type = block.getType();
+        // Standable on solid ground with air/passable above
+        return !type.isSolid() &&
                 !block.isLiquid() &&
                 block.getRelative(BlockFace.DOWN).getType().isSolid() &&
                 !block.getRelative(BlockFace.DOWN).isLiquid();
     }
 
-    private static boolean isAdjacentToWater(Block block) {
-        // Check horizontal neighbors for water
+    private static Block getAdjacentWater(Block block) {
         BlockFace[] faces = { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST };
         for (BlockFace face : faces) {
             Block neighbor = block.getRelative(face);
-            if (neighbor.getType() == Material.WATER || neighbor.getType() == Material.SEAGRASS
-                    || neighbor.getType() == Material.TALL_SEAGRASS) {
-                return true;
+            if (neighbor.getType() == Material.WATER) {
+                return neighbor;
             }
         }
-        return false;
+        return null;
     }
 }

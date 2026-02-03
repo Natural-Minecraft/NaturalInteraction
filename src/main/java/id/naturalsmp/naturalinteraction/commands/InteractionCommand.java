@@ -138,20 +138,32 @@ public class InteractionCommand implements CommandExecutor {
             case "spawnfish":
                 if (!player.hasPermission("naturalinteraction.admin"))
                     return true;
-                org.bukkit.Location shore = id.naturalsmp.naturalinteraction.utils.LocationUtils
-                        .findNearestShoreline(player.getLocation(), 32);
-                if (shore == null) {
+                id.naturalsmp.naturalinteraction.utils.LocationUtils.ShorelineResult shoreRes = id.naturalsmp.naturalinteraction.utils.LocationUtils
+                        .findSafeShoreline(player.getLocation(), 32);
+                if (shoreRes == null) {
                     player.sendMessage(ChatUtils.toComponent("<red>Tidak menemukan pinggiran air di sekitarmu!"));
                     return true;
                 }
+
+                org.bukkit.Location land = shoreRes.landLoc;
+                org.bukkit.Location water = shoreRes.waterLoc;
+
+                // Content-Aware Decoration: Place a Barrel and a Lantern nearby
+                land.clone().add(1, 0, 0).getBlock().setType(org.bukkit.Material.BARREL);
+                land.clone().add(0, 0, 1).getBlock().setType(org.bukkit.Material.LANTERN);
+
                 NPC kakek = CitizensAPI.getNPCRegistry().createNPC(org.bukkit.entity.EntityType.PLAYER, "Kakek Tua");
-                kakek.spawn(shore);
+                kakek.spawn(land);
+
+                // Make NPC face water
+                kakek.faceLocation(water);
+
                 if (!kakek.hasTrait(InteractionTrait.class)) {
                     kakek.addTrait(InteractionTrait.class);
                 }
                 kakek.getTrait(InteractionTrait.class).setInteractionId("fishing_story");
-                player.sendMessage(
-                        ChatUtils.toComponent("<green>Kakek Tua telah muncul di pinggir air! Cek sekitarmu."));
+                player.sendMessage(ChatUtils.toComponent(
+                        "<green>Kakek Tua telah muncul di pinggir air dengan perlengkapannya! Cek sekitarmu."));
                 break;
             default:
                 sendHelp(player);
