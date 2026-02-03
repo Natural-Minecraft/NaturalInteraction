@@ -97,6 +97,15 @@ public class ActionExecutor {
                                 if (meta != null) {
                                     meta.displayName(
                                             id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(itemParts[2]));
+
+                                    // Handle Map Initialization
+                                    if (mat == org.bukkit.Material.FILLED_MAP
+                                            && meta instanceof org.bukkit.inventory.meta.MapMeta) {
+                                        org.bukkit.inventory.meta.MapMeta mapMeta = (org.bukkit.inventory.meta.MapMeta) meta;
+                                        org.bukkit.map.MapView view = org.bukkit.Bukkit.createMap(player.getWorld());
+                                        mapMeta.setMapView(view);
+                                    }
+
                                     is.setItemMeta(meta);
                                 }
                             }
