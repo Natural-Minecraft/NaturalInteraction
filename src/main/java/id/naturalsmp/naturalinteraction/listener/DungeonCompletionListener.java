@@ -1,3 +1,5 @@
+package id.naturalsmp.naturalinteraction.listener;
+
 import id.naturalsmp.naturaldungeon.event.DungeonCompleteEvent;
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import id.naturalsmp.naturalinteraction.manager.InteractionManager;
