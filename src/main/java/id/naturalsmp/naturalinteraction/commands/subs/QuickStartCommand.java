@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class QuickStartCommand extends SubCommand {
+public class QuickStartCommand implements SubCommand {
 
     private final NaturalInteraction plugin;
 
@@ -50,44 +50,44 @@ public class QuickStartCommand extends SubCommand {
 
         if (args.length < 3) {
             player.sendMessage(ChatUtils.toComponent("<red>Usage: " + getUsage()));
-            player.sendMessage(ChatUtils.toComponent("<gray>Templates: <white>" +
-                    Arrays.stream(InteractionTemplate.values())
-                            .map(Enum::name)
-                            .collect(Collectors.joining(", "))));
+            player.sendMessage(ChatUtils.toComponent("<gray>Templates: <white>QUEST, SHOP, LORE, TUTORIAL"));
             return;
         }
 
-        String id = args[1].toLowerCase();
+        String interactionId = args[1].toLowerCase();
         String templateStr = args[2].toUpperCase();
         InteractionTemplate template;
 
         try {
             template = InteractionTemplate.valueOf(templateStr);
         } catch (IllegalArgumentException e) {
-            player.sendMessage(ChatUtils.toComponent("<red>Invalid Template! Available: <white>" +
-                    Arrays.stream(InteractionTemplate.values())
-                            .map(Enum::name)
-                            .collect(Collectors.joining(", "))));
+            player.sendMessage(ChatUtils.toComponent("<red>Invalid Template: <white>" + templateStr));
+            player.sendMessage(ChatUtils.toComponent("<gray>Available: <white>QUEST, SHOP, LORE, TUTORIAL"));
             return;
         }
 
         InteractionGenerator generator = new InteractionGenerator(plugin);
-        if (generator.generate(id, template, player)) {
-            player.sendMessage(ChatUtils.toComponent("<green><b>SUCCESS!</b> <white>Interaction <yellow>" + id
-                    + " <white>generated from <aqua>" + template.name() + "<white> template."));
+        if (generator.generate(interactionId, template)) {
             player.sendMessage(ChatUtils.toComponent(
-                    "<gray>Edit configuration in <white>plugins/NaturalInteraction/interactions/" + id + ".json"));
+                    "<green><bold>SUCCESS!</bold> <white>Interaction <yellow>" + interactionId + " <white>created!"));
+            player.sendMessage(ChatUtils.toComponent(
+                    "<gray>Edit: <white>plugins/NaturalInteraction/interactions/" + interactionId + ".json"));
         } else {
             player.sendMessage(ChatUtils
-                    .toComponent("<red>Error! Interaction ID <yellow>" + id + " <red>already exists or file error."));
+                    .toComponent("<red>Error! Interaction ID <yellow>" + interactionId + " <red>already exists."));
         }
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, String[] args) {
+        if (args.length == 2) {
+            return List.of("<id>");
+        }
         if (args.length == 3) {
+            String input = args[2].toUpperCase();
             return Arrays.stream(InteractionTemplate.values())
                     .map(Enum::name)
+                    .filter(name -> name.startsWith(input))
                     .collect(Collectors.toList());
         }
         return new ArrayList<>();

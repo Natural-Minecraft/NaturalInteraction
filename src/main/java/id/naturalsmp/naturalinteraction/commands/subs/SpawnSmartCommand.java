@@ -14,7 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SpawnSmartCommand extends SubCommand {
+public class SpawnSmartCommand implements SubCommand {
 
     private final NaturalInteraction plugin;
 

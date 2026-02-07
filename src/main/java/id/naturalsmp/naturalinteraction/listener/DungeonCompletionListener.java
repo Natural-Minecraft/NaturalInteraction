@@ -12,6 +12,8 @@ import java.util.UUID;
 /**
  * Listens for DungeonCompleteEvent from NaturalDungeon
  * and starts mapped interactions for all participants.
+ * 
+ * This listener only works if NaturalDungeon is present.
  */
 public class DungeonCompletionListener implements Listener {
 
@@ -22,29 +24,43 @@ public class DungeonCompletionListener implements Listener {
     }
 
     @EventHandler
-    public void onDungeonComplete(id.naturalsmp.naturaldungeon.event.DungeonCompleteEvent event) {
-        String dungeonId = event.getDungeonId();
+    public void onDungeonComplete(Object event) {
+        // Cast dynamically to avoid compile-time dependency
+        try {
+            Class<?> eventClass = Class.forName("id.naturalsmp.naturaldungeon.event.DungeonCompleteEvent");
 
-        // Check config for dungeon -> interaction mapping
-        String interactionId = plugin.getConfig().getString("triggers." + dungeonId);
+            if (!eventClass.isInstance(event))
+                return;
 
-        if (interactionId == null || interactionId.isEmpty()) {
-            return; // No mapped interaction
-        }
+            String dungeonId = (String) eventClass.getMethod("getDungeonId").invoke(event);
+            @SuppressWarnings("unchecked")
+            java.util.List<UUID> playerUuids = (java.util.List<UUID>) eventClass.getMethod("getPlayerUuids")
+                    .invoke(event);
 
-        InteractionManager manager = plugin.getInteractionManager();
+            // Check config for dungeon -> interaction mapping
+            String interactionId = plugin.getConfig().getString("triggers." + dungeonId);
 
-        // Start interaction for all participants
-        for (UUID uuid : event.getPlayerUuids()) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null && player.isOnline()) {
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    manager.startInteraction(player, interactionId);
-                }, 60L); // Delay to let completion GUI close first
+            if (interactionId == null || interactionId.isEmpty()) {
+                return; // No mapped interaction
             }
-        }
 
-        plugin.getLogger().info("[Dungeon-Story] Triggered interaction '" + interactionId
-                + "' for " + event.getPlayerUuids().size() + " players after dungeon '" + dungeonId + "'");
+            InteractionManager manager = plugin.getInteractionManager();
+
+            // Start interaction for all participants
+            for (UUID uuid : playerUuids) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null && player.isOnline()) {
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        manager.startInteraction(player, interactionId);
+                    }, 60L); // Delay to let completion GUI close first
+                }
+            }
+
+            plugin.getLogger().info("[Dungeon-Story] Triggered interaction '" + interactionId
+                    + "' for " + playerUuids.size() + " players after dungeon '" + dungeonId + "'");
+
+        } catch (Exception e) {
+            // NaturalDungeon not loaded or event class mismatch - ignore silently
+        }
     }
 }
