@@ -10,6 +10,62 @@ import java.util.List;
 
 public class LocationUtils {
 
+    /**
+     * Find a safe ground location near the origin using raycast.
+     * 
+     * @param origin Starting location
+     * @param radius Search radius
+     * @return Safe ground location, or null if none found
+     */
+    public static Location findSafeGround(Location origin, int radius) {
+        // First, try direct raycast downward
+        Location direct = raycastDown(origin.clone());
+        if (direct != null && isSafeForSpawn(direct)) {
+            return direct;
+        }
+
+        // Spiral search within radius
+        for (int r = 1; r <= radius; r++) {
+            for (int x = -r; x <= r; x++) {
+                for (int z = -r; z <= r; z++) {
+                    if (Math.abs(x) != r && Math.abs(z) != r)
+                        continue;
+
+                    Location test = origin.clone().add(x, 0, z);
+                    Location result = raycastDown(test);
+                    if (result != null && isSafeForSpawn(result)) {
+                        return result;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Location raycastDown(Location start) {
+        Location check = start.clone();
+        for (int y = 0; y < 50; y++) {
+            check.setY(start.getY() - y);
+            Block block = check.getBlock();
+            if (block.getType().isSolid() && block.getType() != Material.BARRIER) {
+                return block.getLocation().add(0.5, 1, 0.5);
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSafeForSpawn(Location loc) {
+        Block feet = loc.getBlock();
+        Block head = feet.getRelative(BlockFace.UP);
+        Block ground = feet.getRelative(BlockFace.DOWN);
+
+        if (feet.getType().isSolid() || head.getType().isSolid())
+            return false;
+        if (ground.getType() == Material.WATER || ground.getType() == Material.LAVA)
+            return false;
+        return true;
+    }
+
     public static Location findNearestShoreline(Location center, int radius) {
         ShorelineResult result = findSafeShoreline(center, radius);
         return result != null ? result.landLoc : null;

@@ -56,6 +56,14 @@ public final class NaturalInteraction extends JavaPlugin {
                         this);
         getServer().getPluginManager()
                 .registerEvents(new id.naturalsmp.naturalinteraction.gui.GUIListener(), this);
+
+        // Dungeon-Story Integration (soft dependency)
+        if (getServer().getPluginManager().getPlugin("NaturalDungeon") != null) {
+            getServer().getPluginManager()
+                    .registerEvents(new id.naturalsmp.naturalinteraction.listener.DungeonCompletionListener(this),
+                            this);
+            getLogger().info("Dungeon-Story Integration enabled!");
+        }
     }
 
     public void reloadPlugin() {

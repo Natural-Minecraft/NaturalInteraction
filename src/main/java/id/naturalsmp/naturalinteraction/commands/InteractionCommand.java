@@ -28,6 +28,8 @@ public class InteractionCommand implements CommandExecutor, TabCompleter {
         registerSubCommand(new EditCommand(plugin));
         registerSubCommand(new DeleteCommand(plugin));
         registerSubCommand(new SpawnFishCommand(plugin));
+        registerSubCommand(new QuickStartCommand(plugin));
+        registerSubCommand(new SpawnSmartCommand(plugin));
     }
 
     private void registerSubCommand(SubCommand sub) {
