@@ -39,6 +39,19 @@ public class InteractionSession {
         playNode(interaction.getNode(interaction.getRootNodeId()));
     }
 
+    /**
+     * Start from a specific node (used for post-completion alternate flow)
+     */
+    public void startFromNode(String nodeId) {
+        DialogueNode node = interaction.getNode(nodeId);
+        if (node == null) {
+            player.sendMessage(Component.text("Alternate node not found, using default.", NamedTextColor.YELLOW));
+            start();
+            return;
+        }
+        playNode(node);
+    }
+
     public void playNode(DialogueNode node) {
         if (node == null) {
             end();
@@ -49,6 +62,9 @@ public class InteractionSession {
 
         // Execute Actions (Instant)
         executeActions(node);
+
+        // Execute Per-Node Rewards
+        executeNodeRewards(node);
 
         // Typewriter Sound Effect (Cinematic)
         player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_AMETHYST_CLUSTER_STEP, 1.0f, 1.5f);
@@ -283,30 +299,42 @@ public class InteractionSession {
 
         player.sendMessage(Component.text("Interaction ended.", NamedTextColor.GRAY));
 
-        // Give Rewards
+        // Give Rewards (with one-time check)
+        CompletionTracker tracker = plugin.getInteractionManager().getCompletionTracker();
+        boolean alreadyCompleted = tracker.hasCompleted(player.getUniqueId(), interaction.getId());
+        boolean shouldGiveReward = !interaction.isOneTimeReward() || !alreadyCompleted;
         boolean given = false;
 
-        // Item Rewards
-        if (!interaction.getRewards().isEmpty()) {
-            for (org.bukkit.inventory.ItemStack item : interaction.getRewards()) {
-                if (item != null)
-                    player.getInventory().addItem(item);
+        if (shouldGiveReward) {
+            // Item Rewards
+            if (!interaction.getRewards().isEmpty()) {
+                for (org.bukkit.inventory.ItemStack item : interaction.getRewards()) {
+                    if (item != null)
+                        player.getInventory().addItem(item);
+                }
+                given = true;
             }
-            given = true;
+
+            // Command Rewards
+            if (!interaction.getCommandRewards().isEmpty()) {
+                org.bukkit.command.ConsoleCommandSender console = Bukkit.getConsoleSender();
+                for (String cmd : interaction.getCommandRewards()) {
+                    String finalCmd = cmd.replace("%player_name%", player.getName());
+                    Bukkit.dispatchCommand(console, finalCmd);
+                }
+                given = true;
+            }
+
+            if (given) {
+                player.sendMessage(Component.text("Kamu mendapatkan hadiah!", NamedTextColor.GREEN));
+            }
+        } else if (alreadyCompleted) {
+            player.sendMessage(Component.text("Kamu sudah pernah menyelesaikan interaksi ini.", NamedTextColor.YELLOW));
         }
 
-        // Command Rewards
-        if (!interaction.getCommandRewards().isEmpty()) {
-            org.bukkit.command.ConsoleCommandSender console = Bukkit.getConsoleSender();
-            for (String cmd : interaction.getCommandRewards()) {
-                String finalCmd = cmd.replace("%player_name%", player.getName());
-                Bukkit.dispatchCommand(console, finalCmd);
-            }
-            given = true;
-        }
-
-        if (given) {
-            player.sendMessage(Component.text("Kamu mendapatkan hadiah!", NamedTextColor.GREEN));
+        // Mark as completed (always, for tracking)
+        if (!alreadyCompleted) {
+            tracker.markCompleted(player.getUniqueId(), interaction.getId());
         }
     }
 
@@ -316,6 +344,30 @@ public class InteractionSession {
                 entity.remove();
         }
         choiceEntities.clear();
+    }
+
+    /**
+     * Execute per-node command rewards if configured
+     */
+    private void executeNodeRewards(DialogueNode node) {
+        if (!node.isGiveReward() || node.getCommandRewards().isEmpty())
+            return;
+
+        // Check one-time: if interaction is one-time reward and already completed, skip
+        // node rewards too
+        if (interaction.isOneTimeReward()) {
+            CompletionTracker tracker = plugin.getInteractionManager().getCompletionTracker();
+            if (tracker.hasCompleted(player.getUniqueId(), interaction.getId())) {
+                return; // Don't give per-node rewards if already completed
+            }
+        }
+
+        org.bukkit.command.ConsoleCommandSender console = Bukkit.getConsoleSender();
+        for (String cmd : node.getCommandRewards()) {
+            String finalCmd = cmd.replace("%player_name%", player.getName());
+            Bukkit.dispatchCommand(console, finalCmd);
+        }
+        player.sendMessage(Component.text("✨ Hadiah node diterima!", NamedTextColor.GREEN));
     }
 
     private void spawnVisualChoices(DialogueNode node) {

@@ -2,6 +2,7 @@ package id.naturalsmp.naturalinteraction.manager;
 
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import id.naturalsmp.naturalinteraction.model.Interaction;
+import id.naturalsmp.naturalinteraction.model.PostCompletionMode;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -18,6 +19,7 @@ public class InteractionManager {
 
     // Cooldown and One-time reward tracking
     private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
+    private final CompletionTracker completionTracker;
 
     public InteractionManager(NaturalInteraction plugin) {
         this.plugin = plugin;
@@ -25,6 +27,7 @@ public class InteractionManager {
         if (!interactionsFolder.exists()) {
             interactionsFolder.mkdirs();
         }
+        this.completionTracker = new CompletionTracker(plugin);
         loadInteractions();
     }
 
@@ -76,6 +79,10 @@ public class InteractionManager {
         return interactions.keySet();
     }
 
+    public CompletionTracker getCompletionTracker() {
+        return completionTracker;
+    }
+
     /* Session Management */
 
     public void startInteraction(Player player, String interactionId) {
@@ -98,7 +105,15 @@ public class InteractionManager {
 
         InteractionSession session = new InteractionSession(plugin, player, interaction);
         activeSessions.put(player.getUniqueId(), session);
-        session.start();
+
+        // Determine which root to use based on completion status
+        boolean hasCompleted = completionTracker.hasCompleted(player.getUniqueId(), interactionId);
+        if (hasCompleted && interaction.getPostCompletionMode() == PostCompletionMode.ALTERNATE_NODES
+                && interaction.getPostCompletionRootNodeId() != null) {
+            session.startFromNode(interaction.getPostCompletionRootNodeId());
+        } else {
+            session.start();
+        }
     }
 
     public void endInteraction(UUID uuid) {
