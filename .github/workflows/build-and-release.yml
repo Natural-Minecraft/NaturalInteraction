@@ -26,6 +26,21 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Download NaturalDungeon dependency
+        run: |
+          mkdir -p libs
+          curl -L -o libs/NaturalDungeon-2.0.6.jar \
+            "https://github.com/Natural-Minecraft/NaturalDungeon/releases/download/latest/NaturalDungeon-2.0.6.jar"
+
+      - name: Install NaturalDungeon to local Maven repo
+        run: |
+          mvn install:install-file \
+            -Dfile=libs/NaturalDungeon-2.0.6.jar \
+            -DgroupId=id.naturalsmp \
+            -DartifactId=NaturalDungeon \
+            -Dversion=2.0.6 \
+            -Dpackaging=jar
+
       - name: Build with Maven
         run: mvn clean package
 
