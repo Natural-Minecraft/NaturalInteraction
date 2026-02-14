@@ -74,7 +74,7 @@ public class InteractionSession {
 
         // Cinematic Dialogue: Titles and Subtitles
         // Use Typewriter effect concept: Show in chat AND as Subtitle
-        String rawText = node.getText();
+        String rawText = node.getText().replace("%player%", player.getName());
         Component coloredText = id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(rawText);
 
         // Separator (Console/Chat Log style)
