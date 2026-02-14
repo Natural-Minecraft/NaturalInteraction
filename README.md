@@ -1,6 +1,10 @@
-# NaturalInteraction v1.2.0 (Cinematic Edition)
+# NaturalInteraction v1.2.1 (Interactive & Rewards Update)
 
 The "Premium Story Core" for **NaturalSMP**. Merupakan plugin yang bertanggung jawab untuk mengelola sistem interaksi cerita, quest dinamis, dan NPC interaktif dengan pengalaman cinematic yang imersif.
+
+## ✨ Fitur Baru v1.2.1 (Interactive & Rewards Update)
+*   **Interactive Tagging**: Pemain dapat menandai (tag) pemain lain dengan Sneak + Right Click untuk interaksi sosial cepat.
+*   **Interaction Rewards**: Sistem hadiah otomatis saat pemain mencapai milestone interaksi tertentu.
 
 ## ✨ Fitur Utama
 
