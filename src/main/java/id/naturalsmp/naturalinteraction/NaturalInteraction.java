@@ -4,6 +4,7 @@ import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import id.naturalsmp.naturalinteraction.story.StoryManager;
 import id.naturalsmp.naturalinteraction.commands.InteractionCommand;
 import id.naturalsmp.naturalinteraction.manager.InteractionManager;
+import id.naturalsmp.naturalinteraction.editor.EditorMode;
 import id.naturalsmp.naturalinteraction.hook.CitizensHook;
 import id.naturalsmp.naturalinteraction.npc.StoryNPCManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -14,6 +15,7 @@ public final class NaturalInteraction extends JavaPlugin {
     private StoryManager storyManager;
     private StoryNPCManager npcManager;
     private InteractionManager interactionManager;
+    private EditorMode editorMode;
 
     @Override
     public void onEnable() {
@@ -26,6 +28,7 @@ public final class NaturalInteraction extends JavaPlugin {
         this.storyManager = new StoryManager(this);
         this.npcManager = new StoryNPCManager(this);
         this.interactionManager = new InteractionManager(this);
+        this.editorMode = new EditorMode(this);
 
         // Citizens
         CitizensHook.registerTraits(this);
@@ -56,6 +59,8 @@ public final class NaturalInteraction extends JavaPlugin {
                         this);
         getServer().getPluginManager()
                 .registerEvents(new id.naturalsmp.naturalinteraction.gui.GUIListener(), this);
+        getServer().getPluginManager()
+                .registerEvents(new id.naturalsmp.naturalinteraction.editor.EditorHotbarListener(this), this);
 
         // Dungeon-Story Integration (soft dependency)
         if (getServer().getPluginManager().getPlugin("NaturalDungeon") != null) {
@@ -78,6 +83,9 @@ public final class NaturalInteraction extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (editorMode != null) {
+            editorMode.disableAll();
+        }
         if (storyManager != null) {
             storyManager.saveProgress();
         }
@@ -97,5 +105,9 @@ public final class NaturalInteraction extends JavaPlugin {
 
     public InteractionManager getInteractionManager() {
         return interactionManager;
+    }
+
+    public EditorMode getEditorMode() {
+        return editorMode;
     }
 }

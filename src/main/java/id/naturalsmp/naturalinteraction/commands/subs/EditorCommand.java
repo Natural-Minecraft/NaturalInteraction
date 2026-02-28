@@ -2,7 +2,6 @@ package id.naturalsmp.naturalinteraction.commands.subs;
 
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import id.naturalsmp.naturalinteraction.commands.SubCommand;
-import id.naturalsmp.naturalinteraction.gui.AdminEditorGUI;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -24,7 +23,7 @@ public class EditorCommand implements SubCommand {
 
     @Override
     public String getDescription() {
-        return "Open the story and interaction editor.";
+        return "Toggle Hotbar Editor Mode.";
     }
 
     @Override
@@ -43,7 +42,13 @@ public class EditorCommand implements SubCommand {
             sender.sendMessage("This command can only be used by players.");
             return;
         }
-        new AdminEditorGUI(plugin, player).open();
+
+        // Toggle editor mode
+        if (plugin.getEditorMode().isInEditorMode(player)) {
+            plugin.getEditorMode().exitEditorMode(player);
+        } else {
+            plugin.getEditorMode().enterEditorMode(player);
+        }
     }
 
     @Override
