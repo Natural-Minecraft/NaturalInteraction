@@ -10,8 +10,12 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.UUID;
@@ -21,9 +25,16 @@ public class InteractionSession {
     private final Player player;
     private final Interaction interaction;
     private DialogueNode currentNode;
-    private BukkitRunnable task;
+    private BukkitRunnable timerTask;
+    private BukkitRunnable typewriterTask;
+    private BukkitRunnable actionBarTask;
     private BossBar bossBar;
     private final java.util.List<org.bukkit.entity.Entity> choiceEntities = new java.util.ArrayList<>();
+
+    // Typewriter state
+    private String fullDialogueText = "";
+    private int revealedWords = 0;
+    private boolean typewriterDone = false;
 
     public InteractionSession(NaturalInteraction plugin, Player player, Interaction interaction) {
         this.plugin = plugin;
@@ -36,6 +47,10 @@ public class InteractionSession {
             player.sendMessage(Component.text("Interaction has no starting point!", NamedTextColor.RED));
             return;
         }
+
+        // Apply cinematic focus lock
+        applyCinematicLock();
+
         playNode(interaction.getNode(interaction.getRootNodeId()));
     }
 
@@ -49,7 +64,28 @@ public class InteractionSession {
             start();
             return;
         }
+        applyCinematicLock();
         playNode(node);
+    }
+
+    /**
+     * Apply cinematic movement lock and zoom effect
+     */
+    private void applyCinematicLock() {
+        // Slowness 255 = complete freeze (no walking)
+        player.addPotionEffect(
+                new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 255, false, false, false));
+        // Prevent jumping
+        player.addPotionEffect(
+                new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 128, false, false, false));
+    }
+
+    /**
+     * Remove cinematic lock
+     */
+    private void removeCinematicLock() {
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
+        player.removePotionEffect(PotionEffectType.JUMP_BOOST);
     }
 
     public void playNode(DialogueNode node) {
@@ -58,6 +94,7 @@ public class InteractionSession {
             return;
         }
         cleanupChoices();
+        cancelAllTasks();
         this.currentNode = node;
 
         // Execute Actions (Instant)
@@ -66,110 +103,246 @@ public class InteractionSession {
         // Execute Per-Node Rewards
         executeNodeRewards(node);
 
-        // Typewriter Sound Effect (Cinematic)
-        player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_AMETHYST_CLUSTER_STEP, 1.0f, 1.5f);
-
         // Face NPC if possible
         faceNPC();
 
-        // Cinematic Dialogue: Titles and Subtitles
-        // Use Typewriter effect concept: Show in chat AND as Subtitle
+        // Prepare dialogue text
         String rawText = node.getText().replace("%player%", player.getName());
-        Component coloredText = id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(rawText);
 
-        // Separator (Console/Chat Log style)
-        player.sendMessage(
-                Component.text("-----------------------------------------------------", NamedTextColor.GRAY));
+        // Strip color codes for word splitting (keep original for display)
+        fullDialogueText = rawText;
+        revealedWords = 0;
+        typewriterDone = false;
 
-        // NPC Identity
-        String npcName = interaction.getId(); // Default to ID
-        // In the future, we can bound this to a Citizens NPC name
+        // Clear chat for cinematic focus
+        clearChat();
 
-        Component npcPrefix = Component.text("[NPC] ", NamedTextColor.YELLOW)
-                .append(Component.text(npcName, NamedTextColor.GOLD))
-                .append(Component.text(": ", NamedTextColor.WHITE));
+        // Start typewriter effect on ActionBar
+        startTypewriterEffect();
 
-        Component chatMessage = npcPrefix.append(coloredText);
-
-        // Add Skip Button if skippable and has delay
-        if (node.isSkippable() && (node.getDurationSeconds() > 0)) {
-            chatMessage = chatMessage.append(Component
-                    .text(" [KLIK UNTUK SKIP]", NamedTextColor.RED, net.kyori.adventure.text.format.TextDecoration.BOLD)
-                    .clickEvent(ClickEvent.callback(audience -> {
-                        skip();
-                    }))
-                    .hoverEvent(
-                            HoverEvent.showText(Component.text("Klik untuk lewati dialog", NamedTextColor.YELLOW))));
-        }
-        player.sendMessage(chatMessage);
-        player.sendMessage(Component.empty());
-
-        // SHOW TITLE (Cinematic)
-        String[] words = rawText.split(" ");
-        Component titleComponent;
-        Component subtitleComponent = Component.empty();
-
-        if (words.length > 5) {
-            StringBuilder titleBuilder = new StringBuilder();
-            StringBuilder subtitleBuilder = new StringBuilder();
-            for (int i = 0; i < words.length; i++) {
-                if (i < 5) {
-                    titleBuilder.append(words[i]).append(" ");
-                } else {
-                    subtitleBuilder.append(words[i]).append(" ");
-                }
-            }
-            titleComponent = id.naturalsmp.naturalinteraction.utils.ChatUtils
-                    .toComponent(titleBuilder.toString().trim());
-            subtitleComponent = id.naturalsmp.naturalinteraction.utils.ChatUtils
-                    .toComponent(subtitleBuilder.toString().trim());
-        } else {
-            titleComponent = coloredText;
-        }
-
-        player.showTitle(net.kyori.adventure.title.Title.title(
-                titleComponent,
-                subtitleComponent,
-                net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(200),
-                        java.time.Duration.ofMillis(3000), java.time.Duration.ofMillis(500))));
-        player.sendMessage(Component.text(""));
-
-        // Display Options
+        // Display Options in chat (clickable) after a small delay
         if (!node.getOptions().isEmpty()) {
-            player.sendMessage(Component.text("   Pilih opsi:", NamedTextColor.GRAY));
-
-            // Spawn TextDisplays for visual choice (v1.19.4+)
-            spawnVisualChoices(node);
-
-            for (Option option : node.getOptions()) {
-                Component optionText = Component.text("   ➤ ", NamedTextColor.GOLD)
-                        .append(Component.text(option.getText(), NamedTextColor.YELLOW,
-                                net.kyori.adventure.text.format.TextDecoration.BOLD))
-                        .clickEvent(ClickEvent.callback(audience -> {
-                            selectOption(option);
-                        }))
-                        .hoverEvent(HoverEvent
-                                .showText(Component.text("Klik untuk memilih opsi ini", NamedTextColor.GREEN)));
-                player.sendMessage(optionText);
-            }
-            player.sendMessage(Component.empty());
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                displayOptions(node);
+            }, 10L); // Half-second delay so player reads the text first
         }
-
-        player.sendMessage(
-                Component.text("-----------------------------------------------------", NamedTextColor.GRAY));
 
         // BossBar & Timer
+        setupTimer(node);
+    }
+
+    /**
+     * ActionBar Typewriter Effect
+     * Reveals text word by word with typing sound
+     * Format: [unicode] text...
+     */
+    private void startTypewriterEffect() {
+        String[] words = stripColors(fullDialogueText).split(" ");
+        int totalWords = words.length;
+
+        // Get unicode background from interaction config
+        String unicode = interaction.getDialogueUnicode();
+        String prefix = unicode.isEmpty() ? "" : unicode + " ";
+
+        typewriterTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    cancel();
+                    return;
+                }
+
+                revealedWords++;
+
+                if (revealedWords >= totalWords) {
+                    revealedWords = totalWords;
+                    typewriterDone = true;
+                    cancel();
+                }
+
+                // Build the revealed portion from the ORIGINAL colored text
+                String revealed = getRevealedText(fullDialogueText, revealedWords);
+                Component actionBarText = id.naturalsmp.naturalinteraction.utils.ChatUtils
+                        .toComponent(prefix + revealed);
+
+                player.sendActionBar(actionBarText);
+
+                // Typing sound effect
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
+            }
+        };
+        typewriterTask.runTaskTimer(plugin, 0L, 3L); // Every 3 ticks (~150ms per word)
+
+        // Keep ActionBar alive after typewriter finishes (ActionBar fades after 2 sec)
+        actionBarTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    cancel();
+                    return;
+                }
+                if (typewriterDone) {
+                    String revealed = getRevealedText(fullDialogueText, revealedWords);
+                    Component actionBarText = id.naturalsmp.naturalinteraction.utils.ChatUtils
+                            .toComponent(prefix + revealed);
+                    player.sendActionBar(actionBarText);
+                }
+            }
+        };
+        actionBarTask.runTaskTimer(plugin, 0L, 20L); // Refresh every second to keep it visible
+    }
+
+    /**
+     * Get the first N words from a colored text string, preserving color codes
+     */
+    private String getRevealedText(String coloredText, int wordCount) {
+        if (wordCount <= 0)
+            return "";
+
+        StringBuilder result = new StringBuilder();
+        StringBuilder currentWord = new StringBuilder();
+        String lastColorCode = "";
+        int wordsFound = 0;
+        boolean inColorCode = false;
+        int i = 0;
+
+        while (i < coloredText.length() && wordsFound < wordCount) {
+            char c = coloredText.charAt(i);
+
+            // Check for & color codes (legacy)
+            if (c == '&' && i + 1 < coloredText.length()) {
+                char next = coloredText.charAt(i + 1);
+                if (next == '#' && i + 8 < coloredText.length()) {
+                    // Hex color: &#RRGGBB
+                    String hexCode = coloredText.substring(i, i + 9);
+                    lastColorCode = hexCode;
+                    currentWord.append(hexCode);
+                    i += 9;
+                    continue;
+                } else if ("0123456789abcdefklmnorABCDEFKLMNOR".indexOf(next) != -1) {
+                    String code = "&" + next;
+                    lastColorCode = code;
+                    currentWord.append(code);
+                    i += 2;
+                    continue;
+                }
+            }
+
+            // Check for § color codes (section symbol)
+            if (c == '§' && i + 1 < coloredText.length()) {
+                char next = coloredText.charAt(i + 1);
+                String code = "§" + next;
+                lastColorCode = code;
+                currentWord.append(code);
+                i += 2;
+                continue;
+            }
+
+            if (c == ' ') {
+                if (currentWord.length() > 0) {
+                    if (result.length() > 0)
+                        result.append(' ');
+                    result.append(currentWord);
+                    currentWord.setLength(0);
+                    wordsFound++;
+                }
+                // Carry over last color code to next word
+                if (!lastColorCode.isEmpty()) {
+                    currentWord.append(lastColorCode);
+                }
+                i++;
+                continue;
+            }
+
+            currentWord.append(c);
+            i++;
+        }
+
+        // Don't forget the last word being built
+        if (currentWord.length() > 0 && wordsFound < wordCount) {
+            if (result.length() > 0)
+                result.append(' ');
+            result.append(currentWord);
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Strip color codes for counting purposes
+     */
+    private String stripColors(String text) {
+        // Remove &#RRGGBB
+        String result = text.replaceAll("&#[A-Fa-f0-9]{6}", "");
+        // Remove &X
+        result = result.replaceAll("&[0-9a-fk-orA-FK-OR]", "");
+        // Remove §X
+        result = result.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+        // Remove MiniMessage tags
+        result = result.replaceAll("<[^>]+>", "");
+        return result;
+    }
+
+    /**
+     * Clear player's chat space for cinematic focus
+     */
+    private void clearChat() {
+        for (int i = 0; i < 20; i++) {
+            player.sendMessage(Component.empty());
+        }
+    }
+
+    /**
+     * Display dialogue options in chat (clickable)
+     */
+    private void displayOptions(DialogueNode node) {
+        player.sendMessage(Component.empty());
+        player.sendMessage(Component.text("  ╔═══════════════════════════╗", NamedTextColor.DARK_GRAY));
+        player.sendMessage(Component.text("  ║ ", NamedTextColor.DARK_GRAY)
+                .append(Component.text("Pilih jawaban:", NamedTextColor.GRAY))
+                .append(Component.text("            ║", NamedTextColor.DARK_GRAY)));
+
+        // Spawn TextDisplays for visual choice above NPC head
+        spawnVisualChoices(node);
+
+        for (Option option : node.getOptions()) {
+            Component optionLine = Component.text("  ║ ", NamedTextColor.DARK_GRAY)
+                    .append(Component.text("  ➤ ", NamedTextColor.GOLD))
+                    .append(Component.text(stripColors(option.getText()), NamedTextColor.YELLOW, TextDecoration.BOLD))
+                    .clickEvent(ClickEvent.callback(audience -> {
+                        selectOption(option);
+                    }))
+                    .hoverEvent(HoverEvent.showText(
+                            Component.text("✦ Klik untuk memilih", NamedTextColor.GREEN)));
+            player.sendMessage(optionLine);
+        }
+
+        player.sendMessage(Component.text("  ╚═══════════════════════════╝", NamedTextColor.DARK_GRAY));
+
+        // Guidance in ActionBar during options (combined with dialogue)
+        // The actionBar task will keep showing the dialogue text
+    }
+
+    /**
+     * Setup the timer BossBar and auto-advance/timeout logic
+     */
+    private void setupTimer(DialogueNode node) {
         if (bossBar != null)
             player.hideBossBar(bossBar);
-        bossBar = BossBar.bossBar(Component.text("Duration"), 1.0f, BossBar.Color.BLUE, BossBar.Overlay.PROGRESS);
-        player.showBossBar(bossBar);
 
-        if (task != null && !task.isCancelled())
-            task.cancel();
+        // Cinematic boss bar with interaction name
+        String npcName = interaction.getId().replace("_", " ");
+        npcName = npcName.substring(0, 1).toUpperCase() + npcName.substring(1);
+        bossBar = BossBar.bossBar(
+                Component.text("✦ ", NamedTextColor.GOLD)
+                        .append(Component.text(npcName, NamedTextColor.YELLOW))
+                        .append(Component.text(" ✦", NamedTextColor.GOLD)),
+                1.0f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
+        player.showBossBar(bossBar);
 
         final int durationTicks = node.getDurationSeconds() * 20;
 
-        task = new BukkitRunnable() {
+        timerTask = new BukkitRunnable() {
             int ticksLeft = durationTicks;
 
             @Override
@@ -180,8 +353,7 @@ public class InteractionSession {
                     return;
                 }
 
-                ticksLeft -= 2; // Run every 2 ticks
-                // Prevent division by zero if duration is 0
+                ticksLeft -= 2;
                 float progress = durationTicks > 0 ? (float) ticksLeft / durationTicks : 0;
                 if (progress < 0)
                     progress = 0;
@@ -193,7 +365,7 @@ public class InteractionSession {
                 }
             }
         };
-        task.runTaskTimer(plugin, 0L, 2L);
+        timerTask.runTaskTimer(plugin, 0L, 2L);
     }
 
     private void handleTimeout() {
@@ -204,8 +376,8 @@ public class InteractionSession {
             // End of conversation
             end();
         } else {
-            // Options exist but time ran out. End.
-            player.sendMessage(Component.text("Time expired.", NamedTextColor.RED));
+            // Options exist but time ran out
+            player.sendMessage(Component.text("⏱ Waktu habis.", NamedTextColor.RED));
             end();
         }
     }
@@ -217,55 +389,71 @@ public class InteractionSession {
     }
 
     private void faceNPC() {
-        // Try to find if this interaction is triggered by an NPC
-        // For now, we look for nearby Citizens NPCs with this interaction ID
-        for (net.citizensnpcs.api.npc.NPC npc : net.citizensnpcs.api.CitizensAPI.getNPCRegistry()) {
-            if (npc.isSpawned() && npc.getStoredLocation().getWorld().equals(player.getWorld())) {
-                if (npc.getStoredLocation().distanceSquared(player.getLocation()) < 25) { // Within 5 blocks
-                    if (npc.hasTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)) {
-                        String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
-                                .getInteractionId();
-                        if (interaction.getId().equals(id)) {
-                            // Move player to cinematic distance (2.5 blocks)
-                            org.bukkit.Location npcLoc = npc.getStoredLocation().clone();
-                            org.bukkit.Location playerLoc = player.getLocation();
+        try {
+            for (net.citizensnpcs.api.npc.NPC npc : net.citizensnpcs.api.CitizensAPI.getNPCRegistry()) {
+                if (npc.isSpawned() && npc.getStoredLocation().getWorld().equals(player.getWorld())) {
+                    if (npc.getStoredLocation().distanceSquared(player.getLocation()) < 25) {
+                        if (npc.hasTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)) {
+                            String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
+                                    .getInteractionId();
+                            if (interaction.getId().equals(id)) {
+                                // Move player to cinematic distance (2.5 blocks)
+                                org.bukkit.Location npcLoc = npc.getStoredLocation().clone();
+                                org.bukkit.Location playerLoc = player.getLocation();
 
-                            // Calculate direction from NPC to Player
-                            org.bukkit.util.Vector dir = playerLoc.toVector().subtract(npcLoc.toVector()).normalize();
-                            if (dir.lengthSquared() == 0 || Double.isNaN(dir.getX())) {
-                                dir = npcLoc.getDirection().multiply(-1); // Fallback to NPC back direction
+                                org.bukkit.util.Vector dir = playerLoc.toVector().subtract(npcLoc.toVector())
+                                        .normalize();
+                                if (dir.lengthSquared() == 0 || Double.isNaN(dir.getX())) {
+                                    dir = npcLoc.getDirection().multiply(-1);
+                                }
+
+                                org.bukkit.Location targetLoc = npcLoc.clone().add(dir.multiply(2.5));
+                                targetLoc.setY(playerLoc.getY());
+
+                                org.bukkit.Location lookLoc = npcLoc.clone().add(0, 1.5, 0);
+                                targetLoc.setDirection(lookLoc.toVector().subtract(targetLoc.toVector()).normalize());
+
+                                player.teleport(targetLoc,
+                                        org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN);
+                                return;
                             }
-
-                            org.bukkit.Location targetLoc = npcLoc.clone().add(dir.multiply(2.5));
-
-                            // Adjust Y to find safe ground if possible
-                            targetLoc.setY(playerLoc.getY());
-
-                            // Look at NPC head
-                            org.bukkit.Location lookLoc = npcLoc.clone().add(0, 1.5, 0);
-                            targetLoc.setDirection(lookLoc.toVector().subtract(targetLoc.toVector()).normalize());
-
-                            player.teleport(targetLoc,
-                                    org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN);
-                            return;
                         }
                     }
                 }
             }
+        } catch (Exception ignored) {
+            // Citizens not loaded, skip
         }
     }
 
     public void skip() {
         if (plugin.getInteractionManager().getSession(player.getUniqueId()) != this) {
-            player.sendMessage(Component.text("This interaction has expired.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Interaksi ini telah kedaluwarsa.", NamedTextColor.RED));
             return;
         }
 
-        // Skip current delay
-        if (task != null && !task.isCancelled()) {
-            task.cancel();
+        // If typewriter is still running, first complete it instantly
+        if (!typewriterDone) {
+            typewriterDone = true;
+            if (typewriterTask != null && !typewriterTask.isCancelled())
+                typewriterTask.cancel();
+
+            // Show full text immediately
+            String unicode = interaction.getDialogueUnicode();
+            String prefix = unicode.isEmpty() ? "" : unicode + " ";
+            Component fullText = id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent(prefix + fullDialogueText);
+            player.sendActionBar(fullText);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
+            return; // First skip = complete typewriter. Second skip = advance.
         }
-        bossBar.progress(0);
+
+        // Skip timer and advance
+        if (timerTask != null && !timerTask.isCancelled()) {
+            timerTask.cancel();
+        }
+        if (bossBar != null)
+            bossBar.progress(0);
         handleTimeout();
     }
 
@@ -275,8 +463,10 @@ public class InteractionSession {
             return;
         }
 
-        if (task != null)
-            task.cancel();
+        // Selection sound
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+
+        cancelAllTasks();
         playNode(interaction.getNode(option.getTargetNodeId()));
     }
 
@@ -289,15 +479,16 @@ public class InteractionSession {
     public void end() {
         if (bossBar != null)
             player.hideBossBar(bossBar);
-        if (task != null)
-            task.cancel();
+        cancelAllTasks();
         cleanupChoices();
+        removeCinematicLock();
         plugin.getInteractionManager().endInteraction(player.getUniqueId());
 
-        // Remove Zoom if active (cleanup)
-        player.removePotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS);
+        // Clear the ActionBar
+        player.sendActionBar(Component.empty());
 
-        player.sendMessage(Component.text("Interaction ended.", NamedTextColor.GRAY));
+        // Ending sound
+        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 1.0f);
 
         // Give Rewards (with one-time check)
         CompletionTracker tracker = plugin.getInteractionManager().getCompletionTracker();
@@ -326,16 +517,27 @@ public class InteractionSession {
             }
 
             if (given) {
-                player.sendMessage(Component.text("Kamu mendapatkan hadiah!", NamedTextColor.GREEN));
+                player.sendMessage(Component.text("✨ ", NamedTextColor.GOLD)
+                        .append(Component.text("Kamu mendapatkan hadiah!", NamedTextColor.GREEN)));
             }
         } else if (alreadyCompleted) {
-            player.sendMessage(Component.text("Kamu sudah pernah menyelesaikan interaksi ini.", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("✦ ", NamedTextColor.YELLOW)
+                    .append(Component.text("Kamu sudah pernah menyelesaikan interaksi ini.", NamedTextColor.GRAY)));
         }
 
-        // Mark as completed (always, for tracking)
+        // Mark as completed
         if (!alreadyCompleted) {
             tracker.markCompleted(player.getUniqueId(), interaction.getId());
         }
+    }
+
+    private void cancelAllTasks() {
+        if (timerTask != null && !timerTask.isCancelled())
+            timerTask.cancel();
+        if (typewriterTask != null && !typewriterTask.isCancelled())
+            typewriterTask.cancel();
+        if (actionBarTask != null && !actionBarTask.isCancelled())
+            actionBarTask.cancel();
     }
 
     private void cleanupChoices() {
@@ -353,12 +555,10 @@ public class InteractionSession {
         if (!node.isGiveReward() || node.getCommandRewards().isEmpty())
             return;
 
-        // Check one-time: if interaction is one-time reward and already completed, skip
-        // node rewards too
         if (interaction.isOneTimeReward()) {
             CompletionTracker tracker = plugin.getInteractionManager().getCompletionTracker();
             if (tracker.hasCompleted(player.getUniqueId(), interaction.getId())) {
-                return; // Don't give per-node rewards if already completed
+                return;
             }
         }
 
@@ -367,31 +567,35 @@ public class InteractionSession {
             String finalCmd = cmd.replace("%player_name%", player.getName());
             Bukkit.dispatchCommand(console, finalCmd);
         }
-        player.sendMessage(Component.text("✨ Hadiah node diterima!", NamedTextColor.GREEN));
+        player.sendMessage(Component.text("✨ ", NamedTextColor.GOLD)
+                .append(Component.text("Hadiah node diterima!", NamedTextColor.GREEN)));
     }
 
     private void spawnVisualChoices(DialogueNode node) {
-        // Try to find the NPC location
         org.bukkit.Location npcBase = null;
-        for (net.citizensnpcs.api.npc.NPC npc : net.citizensnpcs.api.CitizensAPI.getNPCRegistry()) {
-            if (npc.isSpawned() && npc.getStoredLocation().getWorld().equals(player.getWorld())) {
-                if (npc.getStoredLocation().distanceSquared(player.getLocation()) < 25) {
-                    if (npc.hasTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)) {
-                        String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
-                                .getInteractionId();
-                        if (interaction.getId().equals(id)) {
-                            npcBase = npc.getStoredLocation();
-                            break;
+        try {
+            for (net.citizensnpcs.api.npc.NPC npc : net.citizensnpcs.api.CitizensAPI.getNPCRegistry()) {
+                if (npc.isSpawned() && npc.getStoredLocation().getWorld().equals(player.getWorld())) {
+                    if (npc.getStoredLocation().distanceSquared(player.getLocation()) < 25) {
+                        if (npc.hasTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)) {
+                            String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
+                                    .getInteractionId();
+                            if (interaction.getId().equals(id)) {
+                                npcBase = npc.getStoredLocation();
+                                break;
+                            }
                         }
                     }
                 }
             }
+        } catch (Exception ignored) {
+            return;
         }
 
         if (npcBase == null)
             return;
 
-        double startHeight = 2.5; // Start above NPC head
+        double startHeight = 2.5;
         double spacing = 0.4;
 
         for (int i = 0; i < node.getOptions().size(); i++) {
@@ -399,7 +603,7 @@ public class InteractionSession {
             Option option = node.getOptions().get(i);
             org.bukkit.Location loc = npcBase.clone().add(0, startHeight + (i * spacing), 0);
 
-            // 1. Spawn TextDisplay
+            // TextDisplay with semi-transparent dark background
             org.bukkit.entity.TextDisplay textDisplay = loc.getWorld().spawn(loc, org.bukkit.entity.TextDisplay.class,
                     td -> {
                         td.text(id.naturalsmp.naturalinteraction.utils.ChatUtils
@@ -407,10 +611,12 @@ public class InteractionSession {
                         td.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
                         td.setPersistent(false);
                         td.setViewRange(15);
+                        // Semi-transparent black background for readability
+                        td.setBackgroundColor(org.bukkit.Color.fromARGB(160, 0, 0, 0));
                     });
             choiceEntities.add(textDisplay);
 
-            // 2. Spawn Interaction Entity (Floating Click Zone)
+            // Interaction Entity (Floating Click Zone)
             org.bukkit.entity.Interaction interactEntity = loc.getWorld().spawn(loc,
                     org.bukkit.entity.Interaction.class, ie -> {
                         ie.setInteractionHeight(0.3f);

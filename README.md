@@ -1,8 +1,16 @@
-# NaturalInteraction v1.2.1 (Interactive & Rewards Update)
+# NaturalInteraction v1.3.0 (Cinematic ActionBar Update)
 
 The "Premium Story Core" for **NaturalSMP**. Merupakan plugin yang bertanggung jawab untuk mengelola sistem interaksi cerita, quest dinamis, dan NPC interaktif dengan pengalaman cinematic yang imersif.
 
-## ✨ Fitur Baru v1.2.1 (Interactive & Rewards Update)
+## ✨ Fitur Baru v1.3.0 (Cinematic ActionBar Update)
+*   **ActionBar Dialogue System**: Dialog NPC kini muncul di ActionBar dengan efek typewriter (kata per kata) — tidak menghalangi pandangan pemain.
+*   **ItemsAdder Unicode Background**: Dukungan karakter unicode dari ItemsAdder sebagai latar visual dialog (Terraria-style dialogue box). Konfigurasi `dialogueUnicode` per-interaction.
+*   **Cinematic Focus Lock**: Pemain otomatis terkunci (tidak bisa bergerak) selama dialog berlangsung, namun tetap bisa memutar kepala.
+*   **Sneak to Skip**: Tekan Shift untuk skip dialog. Skip pertama = langsung tampilkan semua teks. Skip kedua = lanjut ke node berikutnya.
+*   **Enhanced TextDisplay**: Opsi jawaban di atas NPC kini memiliki background semi-transparan gelap agar mudah dibaca.
+*   **Cinematic BossBar**: BossBar timer kini menampilkan nama NPC dengan style yang lebih menarik.
+
+## ✨ Fitur v1.2.1 (Interactive & Rewards Update)
 *   **Interactive Tagging**: Pemain dapat menandai (tag) pemain lain dengan Sneak + Right Click untuk interaksi sosial cepat.
 *   **Interaction Rewards**: Sistem hadiah otomatis saat pemain mencapai milestone interaksi tertentu.
 

@@ -101,11 +101,23 @@ public class Interaction implements Serializable {
 
     private List<String> commandRewards = new ArrayList<>();
 
+    // ItemsAdder unicode character for ActionBar dialogue background
+    // (Terraria-style)
+    private String dialogueUnicode = "";
+
     public List<String> getCommandRewards() {
         return commandRewards;
     }
 
     public void setCommandRewards(List<String> commandRewards) {
         this.commandRewards = commandRewards;
+    }
+
+    public String getDialogueUnicode() {
+        return dialogueUnicode != null ? dialogueUnicode : "";
+    }
+
+    public void setDialogueUnicode(String dialogueUnicode) {
+        this.dialogueUnicode = dialogueUnicode;
     }
 }
