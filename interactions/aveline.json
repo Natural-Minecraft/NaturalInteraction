@@ -1,0 +1,132 @@
+{
+    "id": "aveline",
+    "rootNodeId": "sapa",
+    "oneTimeReward": false,
+    "cooldownSeconds": 86400,
+    "dialogueUnicode": "",
+    "postCompletionMode": "ALTERNATE_NODES",
+    "postCompletionRootNodeId": "sapa",
+    "nodes": {
+        "sapa": {
+            "id": "sapa",
+            "text": "&#FFAAAA&lAveline &fHmph, jadi kau datang lagi? Bukannya aku peduli, tapi keberadaanmu cukup berguna untuk menjaga keseimbangan dunia ini.",
+            "options": [
+                {
+                    "text": "Berikan aku kekuatan.",
+                    "targetNodeId": "pilih_buff"
+                },
+                {
+                    "text": "Tidak jadi, terima kasih.",
+                    "targetNodeId": "pergi"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "true"
+                }
+            ],
+            "durationSeconds": 15,
+            "giveReward": false
+        },
+        "pilih_buff": {
+            "id": "pilih_buff",
+            "text": "&#FFAAAA&lAveline &fCih, dasar manusia rapuh. Baiklah, pilih salah satu berkah yang kau butuhkan saat ini.",
+            "options": [
+                {
+                    "text": "[Kekuatan]",
+                    "targetNodeId": "buff_kekuatan"
+                },
+                {
+                    "text": "[Ketangguhan]",
+                    "targetNodeId": "buff_ketangguhan"
+                },
+                {
+                    "text": "[Kegigihan]",
+                    "targetNodeId": "buff_kegigihan"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 15,
+            "giveReward": false
+        },
+        "buff_kekuatan": {
+            "id": "buff_kekuatan",
+            "text": "&#FFAAAA&lAveline &fKekuatan ya? Jangan sampai kekuatan ini menumpulkan instingmu. Keharmonisan butuh lebih dari sekedar tenaga.",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                },
+                {
+                    "type": "EFFECT",
+                    "value": "INCREASE_DAMAGE,3600,1"
+                },
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_PLAYER_LEVELUP,1.0,1.2"
+                }
+            ],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "buff_ketangguhan": {
+            "id": "buff_ketangguhan",
+            "text": "&#FFAAAA&lAveline &fBagus, bertahan hidup itu penting. Tapi jangan lengah hanya karena kau merasa kebal.",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                },
+                {
+                    "type": "EFFECT",
+                    "value": "DAMAGE_RESISTANCE,3600,1"
+                },
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_PLAYER_LEVELUP,1.0,1.2"
+                }
+            ],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "buff_kegigihan": {
+            "id": "buff_kegigihan",
+            "text": "&#FFAAAA&lAveline &fKau mau bekerja lebih keras? Setidaknya kau tidak malas. Ini, ambil dan manfaatkan waktumu.",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                },
+                {
+                    "type": "EFFECT",
+                    "value": "FAST_DIGGING,3600,1"
+                },
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_PLAYER_LEVELUP,1.0,1.2"
+                }
+            ],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "pergi": {
+            "id": "pergi",
+            "text": "&#FFAAAA&lAveline &fBegitu? Ya sudah kalau begitu, jangan harap aku akan menawarkannya lagi hari ini!",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                }
+            ],
+            "durationSeconds": 5,
+            "giveReward": false
+        }
+    },
+    "rewards": [],
+    "commandRewards": []
+}

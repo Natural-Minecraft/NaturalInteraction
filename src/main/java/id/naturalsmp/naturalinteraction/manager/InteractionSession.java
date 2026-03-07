@@ -529,6 +529,12 @@ public class InteractionSession {
         if (!alreadyCompleted) {
             tracker.markCompleted(player.getUniqueId(), interaction.getId());
         }
+
+        // Apply Cooldown if interaction has it
+        long cooldownSecs = interaction.getCooldownSeconds();
+        if (cooldownSecs > 0) {
+            plugin.getInteractionManager().setOnCooldown(player.getUniqueId(), interaction.getId(), cooldownSecs);
+        }
     }
 
     private void cancelAllTasks() {

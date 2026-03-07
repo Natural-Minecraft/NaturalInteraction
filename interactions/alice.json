@@ -1,0 +1,76 @@
+{
+    "id": "alice",
+    "rootNodeId": "sapa",
+    "oneTimeReward": false,
+    "cooldownSeconds": 0,
+    "dialogueUnicode": "",
+    "nodes": {
+        "sapa": {
+            "id": "sapa",
+            "text": "&#AAAAAA&lAlice &f...Ada yang bisa kubantu? Perpustakaan mimpi ini bukan tempat untuk rekreasi.",
+            "options": [
+                {
+                    "text": "Aku ingin bertemu Aveline.",
+                    "targetNodeId": "tanya_aveline"
+                },
+                {
+                    "text": "Maaf mengganggu.",
+                    "targetNodeId": "pergi"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "true"
+                }
+            ],
+            "durationSeconds": 15,
+            "giveReward": false
+        },
+        "tanya_aveline": {
+            "id": "tanya_aveline",
+            "text": "&#AAAAAA&lAlice &fAveline sang dewi harmoni? Tentu. Tapi ingat, jangan buat dia kesal.",
+            "options": [
+                {
+                    "text": "Bawa aku ke sana.",
+                    "targetNodeId": "teleport"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "teleport": {
+            "id": "teleport",
+            "text": "&#AAAAAA&lAlice &fSemoga dewi memberkatimu.",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "warp aveline %player%"
+                }
+            ],
+            "durationSeconds": 5,
+            "giveReward": false
+        },
+        "pergi": {
+            "id": "pergi",
+            "text": "&#AAAAAA&lAlice &fHmph. Pintu keluarnya di sana.",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                }
+            ],
+            "durationSeconds": 5,
+            "giveReward": false
+        }
+    },
+    "rewards": [],
+    "commandRewards": []
+}

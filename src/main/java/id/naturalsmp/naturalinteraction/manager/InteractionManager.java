@@ -16,6 +16,7 @@ public class InteractionManager {
     private final Map<String, Interaction> interactions = new HashMap<>(); // id -> Interaction
     private final Map<UUID, InteractionSession> activeSessions = new HashMap<>(); // player -> session
     private final File interactionsFolder;
+    private final File cooldownsFile;
 
     // Cooldown and One-time reward tracking
     private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
@@ -27,8 +28,10 @@ public class InteractionManager {
         if (!interactionsFolder.exists()) {
             interactionsFolder.mkdirs();
         }
+        this.cooldownsFile = new File(plugin.getDataFolder(), "cooldowns.json");
         this.completionTracker = new CompletionTracker(plugin);
         loadInteractions();
+        loadCooldowns();
     }
 
     private final com.google.gson.Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
@@ -63,6 +66,33 @@ public class InteractionManager {
             gson.toJson(interaction, writer);
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to save interaction " + interaction.getId());
+            e.printStackTrace();
+        }
+    }
+
+    private void loadCooldowns() {
+        cooldowns.clear();
+        if (!cooldownsFile.exists())
+            return;
+
+        try (java.io.FileReader reader = new java.io.FileReader(cooldownsFile)) {
+            java.lang.reflect.Type type = new com.google.gson.reflect.TypeToken<Map<UUID, Map<String, Long>>>() {
+            }.getType();
+            Map<UUID, Map<String, Long>> loaded = gson.fromJson(reader, type);
+            if (loaded != null) {
+                cooldowns.putAll(loaded);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to load cooldowns.json");
+            e.printStackTrace();
+        }
+    }
+
+    private void saveCooldowns() {
+        try (java.io.FileWriter writer = new java.io.FileWriter(cooldownsFile)) {
+            gson.toJson(cooldowns, writer);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to save cooldowns.json");
             e.printStackTrace();
         }
     }
@@ -137,7 +167,34 @@ public class InteractionManager {
     }
 
     public boolean isOnCooldown(UUID player, String interactionId) {
-        // Simple cooldown logic
-        return false;
+        if (!cooldowns.containsKey(player))
+            return false;
+        Map<String, Long> userCooldowns = cooldowns.get(player);
+        if (!userCooldowns.containsKey(interactionId))
+            return false;
+
+        long expiry = userCooldowns.get(interactionId);
+        if (System.currentTimeMillis() >= expiry) {
+            userCooldowns.remove(interactionId);
+            if (userCooldowns.isEmpty())
+                cooldowns.remove(player);
+            saveCooldowns();
+            return false;
+        }
+        return true;
+    }
+
+    public long getCooldownRemaining(UUID player, String interactionId) {
+        if (!isOnCooldown(player, interactionId))
+            return 0;
+        return cooldowns.get(player).get(interactionId) - System.currentTimeMillis();
+    }
+
+    public void setOnCooldown(UUID player, String interactionId, long durationSeconds) {
+        if (durationSeconds <= 0)
+            return;
+        cooldowns.computeIfAbsent(player, k -> new HashMap<>()).put(interactionId,
+                System.currentTimeMillis() + (durationSeconds * 1000L));
+        saveCooldowns();
     }
 }

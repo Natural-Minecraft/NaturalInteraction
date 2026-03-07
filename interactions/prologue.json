@@ -1,0 +1,175 @@
+{
+    "id": "prologue",
+    "rootNodeId": "kaget",
+    "oneTimeReward": true,
+    "cooldownSeconds": 0,
+    "dialogueUnicode": "",
+    "nodes": {
+        "kaget": {
+            "id": "kaget",
+            "text": "&#FFFFAA&lDewi &eEh kamu disini? Kamu pasti kaget kenapa bisa ada disini kan?",
+            "options": [
+                {
+                    "text": "Lanjut",
+                    "targetNodeId": "perkenalan"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_PLAYER_SPLASH,1.0,1.0"
+                },
+                {
+                    "type": "ZOOM",
+                    "value": "true"
+                }
+            ],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "perkenalan": {
+            "id": "perkenalan",
+            "text": "&#FFFFAA&lDewi &eSebelumnya kenalin aku dewi pengatur alam setelah kematian, aku bertugas untuk memandu jalan bagi para jiwa tersesat.",
+            "options": [
+                {
+                    "text": "Lanjut",
+                    "targetNodeId": "kematian"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "kematian": {
+            "id": "kematian",
+            "text": "&#FFFFAA&lDewi &eAlasan kamu disini pasti karena kematianmu tak wajar, iya kan?",
+            "options": [
+                {
+                    "text": "Aku mati ditabrak tronton",
+                    "targetNodeId": "kaget_tronton"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "kaget_tronton": {
+            "id": "kaget_tronton",
+            "text": "&#FFFFAA&lDewi &eOh ditabra- TRONTON?!",
+            "options": [
+                {
+                    "text": "Lanjut",
+                    "targetNodeId": "berduka"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 8,
+            "giveReward": false
+        },
+        "berduka": {
+            "id": "berduka",
+            "text": "&#FFFFAA&lDewi &eOke oke aku turut berduka atas kematianmu, jadi setidaknya aku akan berikan kamu sesuatu yang spesial sebelum pergi lebih jauh.",
+            "options": [
+                {
+                    "text": "Lanjut",
+                    "targetNodeId": "pilihan_hadiah"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "pilihan_hadiah": {
+            "id": "pilihan_hadiah",
+            "text": "&#FFFFAA&lDewi &eJadi kamu mau apa?",
+            "options": [
+                {
+                    "text": "Kekayaan",
+                    "targetNodeId": "hadiah_kekayaan"
+                },
+                {
+                    "text": "Daya Tahan",
+                    "targetNodeId": "hadiah_dayatahan"
+                },
+                {
+                    "text": "Kekuatan",
+                    "targetNodeId": "hadiah_kekuatan"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "hadiah_kekayaan": {
+            "id": "hadiah_kekayaan",
+            "text": "&#FFFFAA&lDewi &eOke sekarang selamat menikmati kehidupan barumu, aku harap kamu ga mati mengenaskan di kesempatan kali ini.",
+            "options": [
+                {
+                    "text": "Ga akan lah, yakali",
+                    "targetNodeId": "goodluck"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": true,
+            "commandRewards": [
+                "eco give %player_name% 25000"
+            ]
+        },
+        "hadiah_dayatahan": {
+            "id": "hadiah_dayatahan",
+            "text": "&#FFFFAA&lDewi &eOke sekarang selamat menikmati kehidupan barumu, aku harap kamu ga mati mengenaskan di kesempatan kali ini.",
+            "options": [
+                {
+                    "text": "Ga akan lah, yakali",
+                    "targetNodeId": "goodluck"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": true,
+            "commandRewards": [
+                "sk set defense %player_name% 25"
+            ]
+        },
+        "hadiah_kekuatan": {
+            "id": "hadiah_kekuatan",
+            "text": "&#FFFFAA&lDewi &eOke sekarang selamat menikmati kehidupan barumu, aku harap kamu ga mati mengenaskan di kesempatan kali ini.",
+            "options": [
+                {
+                    "text": "Ga akan lah, yakali",
+                    "targetNodeId": "goodluck"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": true,
+            "commandRewards": [
+                "sk set fighting %player_name% 25"
+            ]
+        },
+        "goodluck": {
+            "id": "goodluck",
+            "text": "&#FFFFAA&lDewi &eGoodluck deh kalau gitu.",
+            "options": [],
+            "actions": [
+                {
+                    "type": "ZOOM",
+                    "value": "false"
+                },
+                {
+                    "type": "SOUND",
+                    "value": "ENTITY_ENDERMAN_TELEPORT,1.0,1.0"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "warp lobby %player%"
+                }
+            ],
+            "durationSeconds": 5,
+            "giveReward": false
+        }
+    },
+    "rewards": [],
+    "commandRewards": []
+}
