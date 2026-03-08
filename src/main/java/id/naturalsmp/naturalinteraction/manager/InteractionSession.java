@@ -30,6 +30,7 @@ public class InteractionSession {
     private BukkitRunnable actionBarTask;
     private BossBar bossBar;
     private final java.util.List<org.bukkit.entity.Entity> choiceEntities = new java.util.ArrayList<>();
+    private org.bukkit.entity.TextDisplay mainTextDisplay;
 
     // Typewriter state
     private String fullDialogueText = "";
@@ -114,18 +115,11 @@ public class InteractionSession {
         revealedWords = 0;
         typewriterDone = false;
 
-        // Clear chat for cinematic focus
-        clearChat();
+        // Initialize Hologram
+        setupMainHologram();
 
-        // Start typewriter effect on ActionBar
+        // Start typewriter effect on ActionBar & Hologram
         startTypewriterEffect();
-
-        // Display Options in chat (clickable) after a small delay
-        if (!node.getOptions().isEmpty()) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                displayOptions(node);
-            }, 10L); // Half-second delay so player reads the text first
-        }
 
         // BossBar & Timer
         setupTimer(node);
@@ -162,10 +156,16 @@ public class InteractionSession {
 
                 // Build the revealed portion from the ORIGINAL colored text
                 String revealed = getRevealedText(fullDialogueText, revealedWords);
+
+                // Add space padding to stabilize center alignment
+                int missingChars = stripColors(fullDialogueText).length() - stripColors(revealed).length();
+                String padding = " ".repeat(Math.max(0, missingChars));
+
                 Component actionBarText = id.naturalsmp.naturalinteraction.utils.ChatUtils
-                        .toComponent(prefix + revealed);
+                        .toComponent(prefix + revealed + padding);
 
                 player.sendActionBar(actionBarText);
+                updateMainHologram(revealed);
 
                 // Typing sound effect
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
@@ -183,9 +183,14 @@ public class InteractionSession {
                 }
                 if (typewriterDone) {
                     String revealed = getRevealedText(fullDialogueText, revealedWords);
+
+                    int missingChars = stripColors(fullDialogueText).length() - stripColors(revealed).length();
+                    String padding = " ".repeat(Math.max(0, missingChars));
+
                     Component actionBarText = id.naturalsmp.naturalinteraction.utils.ChatUtils
-                            .toComponent(prefix + revealed);
+                            .toComponent(prefix + revealed + padding);
                     player.sendActionBar(actionBarText);
+                    updateMainHologram(revealed);
                 }
             }
         };
@@ -284,43 +289,73 @@ public class InteractionSession {
     }
 
     /**
-     * Clear player's chat space for cinematic focus
+     * Obsolete chat clearing method (removed body)
      */
     private void clearChat() {
-        for (int i = 0; i < 20; i++) {
-            player.sendMessage(Component.empty());
+        // No longer using chat for options
+    }
+
+    /**
+     * Set up the single main hologram TextDisplay above NPC head for dialogue +
+     * choices
+     */
+    private void setupMainHologram() {
+        org.bukkit.Location npcBase = findNPCLocation();
+        if (npcBase != null) {
+            org.bukkit.Location loc = npcBase.clone().add(0, 2.8, 0);
+            mainTextDisplay = loc.getWorld().spawn(loc, org.bukkit.entity.TextDisplay.class, td -> {
+                td.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+                td.setPersistent(false);
+                td.setViewRange(15);
+                td.setBackgroundColor(org.bukkit.Color.fromARGB(160, 0, 0, 0));
+                td.setAlignment(org.bukkit.entity.TextDisplay.TextAlignment.CENTER);
+            });
         }
     }
 
     /**
-     * Display dialogue options in chat (clickable)
+     * Update hologram text with revealed dialogue and options when ready
      */
-    private void displayOptions(DialogueNode node) {
-        player.sendMessage(Component.empty());
-        player.sendMessage(Component.text("  ╔═══════════════════════════╗", NamedTextColor.DARK_GRAY));
-        player.sendMessage(Component.text("  ║ ", NamedTextColor.DARK_GRAY)
-                .append(Component.text("Pilih jawaban:", NamedTextColor.GRAY))
-                .append(Component.text("            ║", NamedTextColor.DARK_GRAY)));
+    private void updateMainHologram(String revealedText) {
+        if (mainTextDisplay == null || !mainTextDisplay.isValid())
+            return;
 
-        // Spawn TextDisplays for visual choice above NPC head
-        spawnVisualChoices(node);
+        StringBuilder content = new StringBuilder();
+        content.append(revealedText);
 
-        for (Option option : node.getOptions()) {
-            Component optionLine = Component.text("  ║ ", NamedTextColor.DARK_GRAY)
-                    .append(Component.text("  ➤ ", NamedTextColor.GOLD))
-                    .append(Component.text(stripColors(option.getText()), NamedTextColor.YELLOW, TextDecoration.BOLD))
-                    .clickEvent(ClickEvent.callback(audience -> {
-                        selectOption(option);
-                    }))
-                    .hoverEvent(HoverEvent.showText(
-                            Component.text("✦ Klik untuk memilih", NamedTextColor.GREEN)));
-            player.sendMessage(optionLine);
+        // Show options once typewriter is done
+        if (typewriterDone && currentNode != null && !currentNode.getOptions().isEmpty()) {
+            content.append("\n");
+            for (int i = 0; i < currentNode.getOptions().size(); i++) {
+                Option opt = currentNode.getOptions().get(i);
+                content.append("\n&#FFAA00&l").append(i + 1).append(" &#FFFF55>> &e").append(opt.getText());
+            }
         }
 
-        player.sendMessage(Component.text("  ╚═══════════════════════════╝", NamedTextColor.DARK_GRAY));
+        mainTextDisplay.text(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(content.toString().trim()));
+    }
 
-        // Guidance in ActionBar during options (combined with dialogue)
-        // The actionBar task will keep showing the dialogue text
+    /**
+     * Find the NPC location for this interaction
+     */
+    private org.bukkit.Location findNPCLocation() {
+        try {
+            for (net.citizensnpcs.api.npc.NPC npc : net.citizensnpcs.api.CitizensAPI.getNPCRegistry()) {
+                if (npc.isSpawned() && npc.getStoredLocation().getWorld().equals(player.getWorld())) {
+                    if (npc.getStoredLocation().distanceSquared(player.getLocation()) < 25) {
+                        if (npc.hasTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)) {
+                            String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
+                                    .getInteractionId();
+                            if (interaction.getId().equals(id)) {
+                                return npc.getStoredLocation();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     /**
@@ -435,15 +470,17 @@ public class InteractionSession {
         // If typewriter is still running, first complete it instantly
         if (!typewriterDone) {
             typewriterDone = true;
+            revealedWords = stripColors(fullDialogueText).split(" ").length;
             if (typewriterTask != null && !typewriterTask.isCancelled())
                 typewriterTask.cancel();
 
-            // Show full text immediately
+            // Show full text immediately with padding
             String unicode = interaction.getDialogueUnicode();
             String prefix = unicode.isEmpty() ? "" : unicode + " ";
             Component fullText = id.naturalsmp.naturalinteraction.utils.ChatUtils
                     .toComponent(prefix + fullDialogueText);
             player.sendActionBar(fullText);
+            updateMainHologram(fullDialogueText);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
             return; // First skip = complete typewriter. Second skip = advance.
         }
@@ -552,6 +589,10 @@ public class InteractionSession {
                 entity.remove();
         }
         choiceEntities.clear();
+
+        if (mainTextDisplay != null && mainTextDisplay.isValid()) {
+            mainTextDisplay.remove();
+        }
     }
 
     /**
@@ -575,65 +616,5 @@ public class InteractionSession {
         }
         player.sendMessage(Component.text("✨ ", NamedTextColor.GOLD)
                 .append(Component.text("Hadiah node diterima!", NamedTextColor.GREEN)));
-    }
-
-    private void spawnVisualChoices(DialogueNode node) {
-        org.bukkit.Location npcBase = null;
-        try {
-            for (net.citizensnpcs.api.npc.NPC npc : net.citizensnpcs.api.CitizensAPI.getNPCRegistry()) {
-                if (npc.isSpawned() && npc.getStoredLocation().getWorld().equals(player.getWorld())) {
-                    if (npc.getStoredLocation().distanceSquared(player.getLocation()) < 25) {
-                        if (npc.hasTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)) {
-                            String id = npc.getTrait(id.naturalsmp.naturalinteraction.hook.InteractionTrait.class)
-                                    .getInteractionId();
-                            if (interaction.getId().equals(id)) {
-                                npcBase = npc.getStoredLocation();
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-            return;
-        }
-
-        if (npcBase == null)
-            return;
-
-        double startHeight = 2.5;
-        double spacing = 0.4;
-
-        for (int i = 0; i < node.getOptions().size(); i++) {
-            final int index = i;
-            Option option = node.getOptions().get(i);
-            org.bukkit.Location loc = npcBase.clone().add(0, startHeight + (i * spacing), 0);
-
-            // TextDisplay with semi-transparent dark background
-            org.bukkit.entity.TextDisplay textDisplay = loc.getWorld().spawn(loc, org.bukkit.entity.TextDisplay.class,
-                    td -> {
-                        td.text(id.naturalsmp.naturalinteraction.utils.ChatUtils
-                                .toComponent("&#FFAA00&l➤ &e" + option.getText()));
-                        td.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
-                        td.setPersistent(false);
-                        td.setViewRange(15);
-                        // Semi-transparent black background for readability
-                        td.setBackgroundColor(org.bukkit.Color.fromARGB(160, 0, 0, 0));
-                    });
-            choiceEntities.add(textDisplay);
-
-            // Interaction Entity (Floating Click Zone)
-            org.bukkit.entity.Interaction interactEntity = loc.getWorld().spawn(loc,
-                    org.bukkit.entity.Interaction.class, ie -> {
-                        ie.setInteractionHeight(0.3f);
-                        ie.setInteractionWidth(2.0f);
-                        ie.getPersistentDataContainer().set(
-                                new org.bukkit.NamespacedKey(plugin, "choice_index"),
-                                org.bukkit.persistence.PersistentDataType.INTEGER,
-                                index);
-                        ie.setPersistent(false);
-                    });
-            choiceEntities.add(interactEntity);
-        }
     }
 }

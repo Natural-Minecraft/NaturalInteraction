@@ -99,4 +99,18 @@ public class InteractionListener implements Listener {
             }
         }
     }
+
+    /**
+     * Use Hotbar 1-9 to select options
+     */
+    @EventHandler
+    public void onItemHeldChange(org.bukkit.event.player.PlayerItemHeldEvent event) {
+        Player player = event.getPlayer();
+        InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
+        if (session != null) {
+            event.setCancelled(true);
+            int slot = event.getNewSlot(); // 0 to 8
+            session.selectOptionByIndex(slot);
+        }
+    }
 }
