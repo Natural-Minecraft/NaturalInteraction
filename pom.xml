@@ -17,7 +17,7 @@
     </properties>
 
     <build>
-        <finalName>${project.name}</finalName>
+        <finalName>NaturalInteraction</finalName>
         <defaultGoal>clean package</defaultGoal>
         <plugins>
             <plugin>
