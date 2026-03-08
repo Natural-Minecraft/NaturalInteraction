@@ -316,6 +316,10 @@ public class InteractionSession {
     private void displayHotbarOptions() {
         if (currentNode == null || currentNode.getOptions().isEmpty())
             return;
+
+        // Letakkan kursor di tengah (slot 4) sebelum memunculkan opsi agar event tidak
+        // me-cancel ini
+        player.getInventory().setHeldItemSlot(4);
         displayingOptions = true;
 
         player.getInventory().clear();
@@ -328,9 +332,9 @@ public class InteractionSession {
             meta.displayName(id.naturalsmp.naturalinteraction.utils.ChatUtils
                     .toComponent("&#FFAA00&lPilih: &f" + opt.getText()));
             item.setItemMeta(meta);
+            // Tambahkan item dari kiri ke kanan (slot 0, 1, 2...)
             player.getInventory().setItem(i, item);
         }
-        player.getInventory().setHeldItemSlot(0);
     }
 
     public boolean isDisplayingOptions() {
