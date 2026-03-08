@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - lore_system
   workflow_dispatch:
 
 jobs:
