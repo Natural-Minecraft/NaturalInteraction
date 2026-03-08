@@ -16,6 +16,14 @@
             ],
             "actions": [
                 {
+                    "type": "SCREENEFFECT",
+                    "value": "fullscreen BLACK 10 20 15 freeze"
+                },
+                {
+                    "type": "INVISIBLE",
+                    "value": "true"
+                },
+                {
                     "type": "SOUND",
                     "value": "ENTITY_PLAYER_SPLASH,1.0,1.0"
                 },
@@ -156,6 +164,42 @@
                 {
                     "type": "ZOOM",
                     "value": "false"
+                },
+                {
+                    "type": "INVISIBLE",
+                    "value": "false"
+                },
+                {
+                    "type": "SCREENEFFECT",
+                    "value": "fullscreen WHITE 10 15 20 freeze"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "gamemode survival %player%"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "give %player% wooden_sword 1"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "give %player% wooden_pickaxe 1"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "give %player% wooden_axe 1"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "give %player% wooden_shovel 1"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "give %player% cooked_beef 16"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "give %player% golden_shovel 1"
                 },
                 {
                     "type": "SOUND",

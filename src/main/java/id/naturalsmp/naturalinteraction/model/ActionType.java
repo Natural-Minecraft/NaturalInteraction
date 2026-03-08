@@ -9,5 +9,7 @@ public enum ActionType {
     MESSAGE, // value: "Message text"
     ZOOM, // value: "true" (on) or "false" (off)
     ITEM, // value: "MATERIAL,amount,name"
-    ACTIONBAR // value: "Message text"
+    ACTIONBAR, // value: "Message text"
+    SCREENEFFECT, // value: "effect color fadein stay fadeout freeze|nofreeze"
+    INVISIBLE // value: "true" (on) or "false" (off)
 }

@@ -117,6 +117,28 @@ public class ActionExecutor {
                     player.sendActionBar(id.naturalsmp.naturalinteraction.utils.ChatUtils
                             .toComponent(value.replace("%player%", player.getName())));
                     break;
+                case SCREENEFFECT:
+                    // value: "effect color fadein stay fadeout freeze|nofreeze"
+                    // Dispatches: /screeneffect <value> <player>
+                    String screenCmd = "screeneffect " + value.replace("%player%", player.getName());
+                    if (!screenCmd.contains(player.getName())) {
+                        screenCmd += " " + player.getName();
+                    }
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), screenCmd);
+                    break;
+                case INVISIBLE:
+                    if ("true".equalsIgnoreCase(value)) {
+                        // Make player invisible
+                        player.addPotionEffect(new PotionEffect(
+                                PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false, false));
+                        // Hide armor visually by storing and clearing
+                        player.setInvisible(true);
+                    } else {
+                        // Remove invisibility
+                        player.removePotionEffect(PotionEffectType.INVISIBILITY);
+                        player.setInvisible(false);
+                    }
+                    break;
             }
         } catch (Exception e) {
             Bukkit.getLogger().warning("Failed to execute action " + action.getType() + ": " + e.getMessage());

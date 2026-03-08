@@ -519,6 +519,11 @@ public class InteractionSession {
         cancelAllTasks();
         cleanupChoices();
         removeCinematicLock();
+
+        // Safety: remove invisibility if it was set during interaction
+        player.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
+        player.setInvisible(false);
+
         plugin.getInteractionManager().endInteraction(player.getUniqueId());
 
         // Clear the ActionBar
