@@ -100,17 +100,61 @@ public class InteractionListener implements Listener {
         }
     }
 
-    /**
-     * Use Hotbar 1-9 to select options
-     */
     @EventHandler
     public void onItemHeldChange(org.bukkit.event.player.PlayerItemHeldEvent event) {
         Player player = event.getPlayer();
         InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
-        if (session != null) {
+        if (session != null && session.isDisplayingOptions()) {
             event.setCancelled(true);
             int slot = event.getNewSlot(); // 0 to 8
             session.selectOptionByIndex(slot);
+        }
+    }
+
+    @EventHandler
+    public void onDrop(org.bukkit.event.player.PlayerDropItemEvent event) {
+        if (plugin.getInteractionManager().getSession(event.getPlayer().getUniqueId()) != null) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onClick(org.bukkit.event.inventory.InventoryClickEvent event) {
+        if (event.getWhoClicked() instanceof Player player) {
+            if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
+        if (event.getWhoClicked() instanceof Player player) {
+            if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+    public void onCommand(org.bukkit.event.player.PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        if (player.hasPermission("naturalsmp.admin"))
+            return;
+
+        // Any command blocked during interaction
+        if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
+            event.setCancelled(true);
+            player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent("&cSelesaikan percakapan terlebih dahulu!"));
+            return;
+        }
+
+        // Specific block for quest_sky world
+        if (player.getWorld().getName().equalsIgnoreCase("quest_sky")) {
+            event.setCancelled(true);
+            player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent("&cKamu belum bisa menggunakan command di dunia ini. Selesaikan prologue-nya!"));
         }
     }
 }

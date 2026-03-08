@@ -207,7 +207,7 @@
                 },
                 {
                     "type": "COMMAND",
-                    "value": "warp lobby %player%"
+                    "value": "spawn %player%"
                 }
             ],
             "durationSeconds": 5,

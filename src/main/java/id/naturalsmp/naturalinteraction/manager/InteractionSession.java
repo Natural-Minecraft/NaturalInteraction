@@ -31,6 +31,8 @@ public class InteractionSession {
     private BossBar bossBar;
     private final java.util.List<org.bukkit.entity.Entity> choiceEntities = new java.util.ArrayList<>();
     private org.bukkit.entity.TextDisplay mainTextDisplay;
+    private org.bukkit.inventory.ItemStack[] originalInventory;
+    private boolean displayingOptions = false;
 
     // Typewriter state
     private String fullDialogueText = "";
@@ -48,6 +50,9 @@ public class InteractionSession {
             player.sendMessage(Component.text("Interaction has no starting point!", NamedTextColor.RED));
             return;
         }
+
+        // Save inventory
+        originalInventory = player.getInventory().getContents();
 
         // Apply cinematic focus lock
         applyCinematicLock();
@@ -97,6 +102,8 @@ public class InteractionSession {
         cleanupChoices();
         cancelAllTasks();
         this.currentNode = node;
+        this.displayingOptions = false;
+        this.player.getInventory().clear();
 
         // Execute Actions (Instant)
         executeActions(node);
@@ -151,6 +158,8 @@ public class InteractionSession {
                 if (revealedWords >= totalWords) {
                     revealedWords = totalWords;
                     typewriterDone = true;
+                    if (!displayingOptions)
+                        displayHotbarOptions();
                     cancel();
                 }
 
@@ -201,89 +210,58 @@ public class InteractionSession {
      * Get the first N words from a colored text string, preserving color codes
      */
     private String getRevealedText(String coloredText, int wordCount) {
-        if (wordCount <= 0)
-            return "";
+        String[] words = coloredText.split(" ");
+        if (wordCount >= words.length)
+            return coloredText;
 
         StringBuilder result = new StringBuilder();
-        StringBuilder currentWord = new StringBuilder();
-        String lastColorCode = "";
-        int wordsFound = 0;
-        boolean inColorCode = false;
-        int i = 0;
+        String activeColor = "";
+        for (int i = 0; i < wordCount; i++) {
+            if (i > 0)
+                result.append(" ");
 
-        while (i < coloredText.length() && wordsFound < wordCount) {
-            char c = coloredText.charAt(i);
-
-            // Check for & color codes (legacy)
-            if (c == '&' && i + 1 < coloredText.length()) {
-                char next = coloredText.charAt(i + 1);
-                if (next == '#' && i + 8 < coloredText.length()) {
-                    // Hex color: &#RRGGBB
-                    String hexCode = coloredText.substring(i, i + 9);
-                    lastColorCode = hexCode;
-                    currentWord.append(hexCode);
-                    i += 9;
-                    continue;
-                } else if ("0123456789abcdefklmnorABCDEFKLMNOR".indexOf(next) != -1) {
-                    String code = "&" + next;
-                    lastColorCode = code;
-                    currentWord.append(code);
-                    i += 2;
-                    continue;
-                }
+            // Only prepend active color if this word doesn't explicitly start with a color
+            // reset or distinct color
+            if (!words[i].startsWith("&") && !words[i].startsWith("§")) {
+                result.append(activeColor);
             }
-
-            // Check for § color codes (section symbol)
-            if (c == '§' && i + 1 < coloredText.length()) {
-                char next = coloredText.charAt(i + 1);
-                String code = "§" + next;
-                lastColorCode = code;
-                currentWord.append(code);
-                i += 2;
-                continue;
-            }
-
-            if (c == ' ') {
-                if (currentWord.length() > 0) {
-                    if (result.length() > 0)
-                        result.append(' ');
-                    result.append(currentWord);
-                    currentWord.setLength(0);
-                    wordsFound++;
-                }
-                // Carry over last color code to next word
-                if (!lastColorCode.isEmpty()) {
-                    currentWord.append(lastColorCode);
-                }
-                i++;
-                continue;
-            }
-
-            currentWord.append(c);
-            i++;
+            result.append(words[i]);
+            activeColor = getActiveColors(result.toString());
         }
-
-        // Don't forget the last word being built
-        if (currentWord.length() > 0 && wordsFound < wordCount) {
-            if (result.length() > 0)
-                result.append(' ');
-            result.append(currentWord);
-        }
-
         return result.toString();
+    }
+
+    private String getActiveColors(String text) {
+        String active = "";
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if ((c == '&' || c == '§') && i + 1 < text.length()) {
+                char next = text.charAt(i + 1);
+                if (c == '&' && next == '#' && i + 8 < text.length()) {
+                    active = text.substring(i, i + 9);
+                    i += 8;
+                } else if ("0123456789abcdefABCDEF".indexOf(next) != -1) {
+                    active = text.substring(i, i + 2);
+                    i++;
+                } else if ("klmnorKLMNOR".indexOf(next) != -1) {
+                    if (next == 'r' || next == 'R')
+                        active = text.substring(i, i + 2);
+                    else
+                        active += text.substring(i, i + 2);
+                    i++;
+                }
+            }
+        }
+        return active;
     }
 
     /**
      * Strip color codes for counting purposes
      */
     private String stripColors(String text) {
-        // Remove &#RRGGBB
         String result = text.replaceAll("&#[A-Fa-f0-9]{6}", "");
-        // Remove &X
         result = result.replaceAll("&[0-9a-fk-orA-FK-OR]", "");
-        // Remove §X
         result = result.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
-        // Remove MiniMessage tags
         result = result.replaceAll("<[^>]+>", "");
         return result;
     }
@@ -333,6 +311,30 @@ public class InteractionSession {
         }
 
         mainTextDisplay.text(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(content.toString().trim()));
+    }
+
+    private void displayHotbarOptions() {
+        if (currentNode == null || currentNode.getOptions().isEmpty())
+            return;
+        displayingOptions = true;
+
+        player.getInventory().clear();
+        for (int i = 0; i < currentNode.getOptions().size(); i++) {
+            if (i > 8)
+                break;
+            Option opt = currentNode.getOptions().get(i);
+            org.bukkit.inventory.ItemStack item = new org.bukkit.inventory.ItemStack(org.bukkit.Material.PAPER);
+            org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+            meta.displayName(id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent("&#FFAA00&lPilih: &f" + opt.getText()));
+            item.setItemMeta(meta);
+            player.getInventory().setItem(i, item);
+        }
+        player.getInventory().setHeldItemSlot(0);
+    }
+
+    public boolean isDisplayingOptions() {
+        return displayingOptions;
     }
 
     /**
@@ -474,6 +476,9 @@ public class InteractionSession {
             if (typewriterTask != null && !typewriterTask.isCancelled())
                 typewriterTask.cancel();
 
+            if (!displayingOptions)
+                displayHotbarOptions();
+
             // Show full text immediately with padding
             String unicode = interaction.getDialogueUnicode();
             String prefix = unicode.isEmpty() ? "" : unicode + " ";
@@ -523,6 +528,11 @@ public class InteractionSession {
         // Safety: remove invisibility if it was set during interaction
         player.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
         player.setInvisible(false);
+
+        // Restore inventory
+        if (originalInventory != null) {
+            player.getInventory().setContents(originalInventory);
+        }
 
         plugin.getInteractionManager().endInteraction(player.getUniqueId());
 
