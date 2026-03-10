@@ -78,9 +78,9 @@ public class InteractionSession {
      * Apply cinematic movement lock and zoom effect
      */
     private void applyCinematicLock() {
-        // Slowness 255 = complete freeze (no walking)
+        // Slowness 0 (Level 1) = Very slight cinematic FOV zoom
         player.addPotionEffect(
-                new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 255, false, false, false));
+                new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 0, false, false, false));
         // Prevent jumping
         player.addPotionEffect(
                 new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 128, false, false, false));

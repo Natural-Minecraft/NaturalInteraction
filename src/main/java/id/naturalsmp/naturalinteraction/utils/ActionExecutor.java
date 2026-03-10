@@ -80,7 +80,7 @@ public class ActionExecutor {
                     break;
                 case ZOOM:
                     if ("true".equalsIgnoreCase(value)) {
-                        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 99999, 4, false, false));
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 99999, 0, false, false));
                     } else {
                         player.removePotionEffect(PotionEffectType.SLOWNESS);
                     }
