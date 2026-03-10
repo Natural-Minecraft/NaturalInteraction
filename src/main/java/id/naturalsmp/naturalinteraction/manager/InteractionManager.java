@@ -133,6 +133,16 @@ public class InteractionManager {
             return;
         }
 
+        // Max concurrent players check
+        int maxPlayers = interaction.getMaxConcurrentPlayers();
+        if (maxPlayers > 0) {
+            long activeCount = getActiveSessionCountForInteraction(interactionId);
+            if (activeCount >= maxPlayers) {
+                player.sendMessage(ChatColor.RED + "Mohon antri, ada player lain sedang berinteraksi.");
+                return;
+            }
+        }
+
         InteractionSession session = new InteractionSession(plugin, player, interaction);
         activeSessions.put(player.getUniqueId(), session);
 
@@ -153,6 +163,15 @@ public class InteractionManager {
 
     public InteractionSession getSession(UUID uuid) {
         return activeSessions.get(uuid);
+    }
+
+    /**
+     * Count how many active sessions exist for a specific interaction ID
+     */
+    public long getActiveSessionCountForInteraction(String interactionId) {
+        return activeSessions.values().stream()
+                .filter(s -> s.getInteraction().getId().equals(interactionId))
+                .count();
     }
 
     public void createInteraction(String name) {

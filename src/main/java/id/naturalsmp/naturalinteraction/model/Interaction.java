@@ -15,6 +15,8 @@ public class Interaction implements Serializable {
 
     private long cooldownSeconds = 0;
     private boolean oneTimeReward = false;
+    private boolean mandatory = false;
+    private int maxConcurrentPlayers = 0; // 0 = unlimited
     private PostCompletionMode postCompletionMode = PostCompletionMode.SAME_NODES;
     private String postCompletionRootNodeId; // Alternate root for returning players
     private List<ItemStack> rewards = new ArrayList<>(); // Serialized separately usually, but for now we'll assumes
@@ -65,6 +67,22 @@ public class Interaction implements Serializable {
 
     public void setOneTimeReward(boolean oneTimeReward) {
         this.oneTimeReward = oneTimeReward;
+    }
+
+    public boolean isMandatory() {
+        return mandatory;
+    }
+
+    public void setMandatory(boolean mandatory) {
+        this.mandatory = mandatory;
+    }
+
+    public int getMaxConcurrentPlayers() {
+        return maxConcurrentPlayers;
+    }
+
+    public void setMaxConcurrentPlayers(int maxConcurrentPlayers) {
+        this.maxConcurrentPlayers = maxConcurrentPlayers;
     }
 
     public PostCompletionMode getPostCompletionMode() {

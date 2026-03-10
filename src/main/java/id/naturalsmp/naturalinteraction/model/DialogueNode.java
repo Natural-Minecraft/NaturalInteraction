@@ -19,6 +19,7 @@ public class DialogueNode implements Serializable {
     private boolean giveReward = false;
     private List<String> commandRewards = new ArrayList<>();
     private int delayBeforeNext = 20; // Ticks
+    private int delayBeforeDialogueTicks = 0; // Delay before typewriter starts (for screen effects)
 
     public DialogueNode() {
     }
@@ -106,5 +107,13 @@ public class DialogueNode implements Serializable {
 
     public void setCommandRewards(List<String> commandRewards) {
         this.commandRewards = commandRewards;
+    }
+
+    public int getDelayBeforeDialogueTicks() {
+        return delayBeforeDialogueTicks;
+    }
+
+    public void setDelayBeforeDialogueTicks(int delayBeforeDialogueTicks) {
+        this.delayBeforeDialogueTicks = delayBeforeDialogueTicks;
     }
 }

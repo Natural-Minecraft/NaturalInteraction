@@ -7,18 +7,13 @@ import id.naturalsmp.naturalinteraction.model.Interaction;
 import id.naturalsmp.naturalinteraction.model.Option;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.UUID;
 
 public class InteractionSession {
     private final NaturalInteraction plugin;
@@ -43,6 +38,10 @@ public class InteractionSession {
         this.plugin = plugin;
         this.player = player;
         this.interaction = interaction;
+    }
+
+    public Interaction getInteraction() {
+        return interaction;
     }
 
     public void start() {
@@ -96,7 +95,9 @@ public class InteractionSession {
 
     public void playNode(DialogueNode node) {
         if (node == null) {
-            end();
+            if (!interaction.isMandatory()) {
+                end();
+            }
             return;
         }
         cleanupChoices();
@@ -105,7 +106,7 @@ public class InteractionSession {
         this.displayingOptions = false;
         this.player.getInventory().clear();
 
-        // Execute Actions (Instant)
+        // Execute Actions (Instant) — SCREENEFFECT etc. run immediately
         executeActions(node);
 
         // Execute Per-Node Rewards
@@ -114,6 +115,27 @@ public class InteractionSession {
         // Face NPC if possible
         faceNPC();
 
+        // Check if we need to delay the dialogue (for screen effects)
+        int delayTicks = node.getDelayBeforeDialogueTicks();
+        if (delayTicks > 0) {
+            // Delay typewriter + timer — screen effect plays first
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!player.isOnline()) return;
+                    startDialogue(node);
+                }
+            }.runTaskLater(plugin, delayTicks);
+        } else {
+            startDialogue(node);
+        }
+    }
+
+    /**
+     * Start the dialogue portion (typewriter + hologram + timer)
+     * Separated for delayed start support
+     */
+    private void startDialogue(DialogueNode node) {
         // Prepare dialogue text
         String rawText = node.getText().replace("%player%", player.getName());
 
@@ -416,6 +438,9 @@ public class InteractionSession {
         } else if (currentNode.getOptions().isEmpty()) {
             // End of conversation
             end();
+        } else if (interaction.isMandatory()) {
+            // Mandatory: options exist but time ran out — reset timer, player MUST choose
+            setupTimer(currentNode);
         } else {
             // Options exist but time ran out
             player.sendMessage(Component.text("⏱ Waktu habis.", NamedTextColor.RED));
@@ -492,6 +517,12 @@ public class InteractionSession {
             updateMainHologram(fullDialogueText);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
             return; // First skip = complete typewriter. Second skip = advance.
+        }
+
+        // For mandatory interactions: sneak only speeds up typewriter, never ends
+        if (interaction.isMandatory() && currentNode != null && !currentNode.getOptions().isEmpty()) {
+            // Player has options — they MUST pick one, can't skip past
+            return;
         }
 
         // Skip timer and advance

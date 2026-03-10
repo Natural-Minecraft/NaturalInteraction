@@ -3,11 +3,13 @@
     "rootNodeId": "kaget",
     "oneTimeReward": true,
     "cooldownSeconds": 0,
+    "mandatory": true,
+    "maxConcurrentPlayers": 1,
     "dialogueUnicode": "",
     "nodes": {
         "kaget": {
             "id": "kaget",
-            "text": "&#FFFFAA&lDewi &eEh kamu disini? Kamu pasti kaget kenapa bisa ada disini kan?",
+            "text": "&eEh kamu disini? Kamu pasti kaget kenapa bisa ada disini kan?",
             "options": [
                 {
                     "text": "Lanjut",
@@ -30,14 +32,27 @@
                 {
                     "type": "ZOOM",
                     "value": "true"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc select 69"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc hologram remove 1"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc deselect"
                 }
             ],
             "durationSeconds": 10,
+            "delayBeforeDialogueTicks": 40,
             "giveReward": false
         },
         "perkenalan": {
             "id": "perkenalan",
-            "text": "&#FFFFAA&lDewi &eSebelumnya kenalin aku dewi pengatur alam setelah kematian, aku bertugas untuk memandu jalan bagi para jiwa tersesat.",
+            "text": "&eSebelumnya kenalin aku &#FFFFAA&lDewi&e pengatur alam setelah kematian, aku bertugas untuk memandu jalan bagi para jiwa tersesat.",
             "options": [
                 {
                     "text": "Lanjut",
@@ -57,7 +72,20 @@
                     "targetNodeId": "kaget_tronton"
                 }
             ],
-            "actions": [],
+            "actions": [
+                {
+                    "type": "COMMAND",
+                    "value": "npc select 69"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc hologram set 0 &#FFFFAA&lDewi"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc deselect"
+                }
+            ],
             "durationSeconds": 10,
             "giveReward": false
         },
@@ -137,7 +165,7 @@
             "durationSeconds": 10,
             "giveReward": true,
             "commandRewards": [
-                "sk set defense %player_name% 25"
+                "skills skill addlevel %player_name% defense 25"
             ]
         },
         "hadiah_kekuatan": {
@@ -153,7 +181,7 @@
             "durationSeconds": 10,
             "giveReward": true,
             "commandRewards": [
-                "sk set fighting %player_name% 25"
+                "skills skill addlevel %player_name% fighting 25"
             ]
         },
         "goodluck": {
@@ -207,7 +235,23 @@
                 },
                 {
                     "type": "COMMAND",
-                    "value": "spawn %player%"
+                    "value": "sudo %player% /spawn"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc select 69"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc hologram set 0 &8&l????"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc hologram add &b&l!"
+                },
+                {
+                    "type": "COMMAND",
+                    "value": "npc deselect"
                 }
             ],
             "durationSeconds": 5,
