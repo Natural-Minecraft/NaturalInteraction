@@ -606,11 +606,22 @@ public class InteractionSession {
         player.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
         player.setInvisible(false);
 
-        // ALWAYS restore inventory — we saved it at start(), so restore it now.
-        // This also removes any leftover choice paper items.
+        // Restore inventory: check if original had items (returning player)
+        // If original was empty (new player), just clear leftover papers
         if (originalInventory != null) {
-            player.getInventory().clear(); // Remove leftover papers/items from interaction
-            player.getInventory().setContents(originalInventory);
+            boolean originalWasEmpty = true;
+            for (org.bukkit.inventory.ItemStack item : originalInventory) {
+                if (item != null) {
+                    originalWasEmpty = false;
+                    break;
+                }
+            }
+            player.getInventory().clear(); // Always clear leftover papers
+            if (!originalWasEmpty) {
+                // Returning player: restore their saved inventory
+                player.getInventory().setContents(originalInventory);
+            }
+            // New player (empty original): inventory stays clear, rewards given below
         }
 
         // For prologue: if player was forced into prologue on join, restore their saved data
@@ -624,6 +635,14 @@ public class InteractionSession {
         }
 
         plugin.getInteractionManager().endInteraction(player.getUniqueId());
+
+        // Reset NPC hologram back to "????" for prologue (safety net)
+        if ("prologue".equals(interaction.getId())) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "npc select 69");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "npc hologram set 0 \u00a78\u00a7l????");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "npc hologram add \u00a7b\u00a7l!");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "npc deselect");
+        }
 
         // Clear the ActionBar
         player.sendActionBar(Component.empty());
