@@ -606,8 +606,10 @@ public class InteractionSession {
         player.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
         player.setInvisible(false);
 
-        // Restore inventory if we were displaying options (which clears inventory)
-        if (displayingOptions && originalInventory != null) {
+        // ALWAYS restore inventory — we saved it at start(), so restore it now.
+        // This also removes any leftover choice paper items.
+        if (originalInventory != null) {
+            player.getInventory().clear(); // Remove leftover papers/items from interaction
             player.getInventory().setContents(originalInventory);
         }
 
