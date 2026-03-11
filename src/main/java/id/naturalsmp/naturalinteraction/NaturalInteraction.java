@@ -16,6 +16,7 @@ public final class NaturalInteraction extends JavaPlugin {
     private StoryNPCManager npcManager;
     private InteractionManager interactionManager;
     private EditorMode editorMode;
+    private id.naturalsmp.naturalinteraction.listener.PrologueJoinListener prologueJoinListener;
 
     @Override
     public void onEnable() {
@@ -62,6 +63,10 @@ public final class NaturalInteraction extends JavaPlugin {
                 .registerEvents(new id.naturalsmp.naturalinteraction.gui.GUIListener(), this);
         getServer().getPluginManager()
                 .registerEvents(new id.naturalsmp.naturalinteraction.editor.EditorHotbarListener(this), this);
+
+        // Prologue join enforcement
+        this.prologueJoinListener = new id.naturalsmp.naturalinteraction.listener.PrologueJoinListener(this);
+        getServer().getPluginManager().registerEvents(prologueJoinListener, this);
 
         // Dungeon-Story Integration (soft dependency)
         if (getServer().getPluginManager().getPlugin("NaturalDungeon") != null) {
@@ -110,5 +115,9 @@ public final class NaturalInteraction extends JavaPlugin {
 
     public EditorMode getEditorMode() {
         return editorMode;
+    }
+
+    public id.naturalsmp.naturalinteraction.listener.PrologueJoinListener getPrologueJoinListener() {
+        return prologueJoinListener;
     }
 }

@@ -569,6 +569,15 @@ public class InteractionSession {
             player.getInventory().setContents(originalInventory);
         }
 
+        // For prologue: if player was forced into prologue on join, restore their saved data
+        // (inventory + location from before prologue) instead of keeping kit items
+        id.naturalsmp.naturalinteraction.listener.PrologueJoinListener prologueListener =
+                plugin.getPrologueJoinListener();
+        boolean restoredFromJoin = false;
+        if (prologueListener != null && prologueListener.hasSavedData(player.getUniqueId())) {
+            restoredFromJoin = prologueListener.restorePlayerData(player);
+        }
+
         plugin.getInteractionManager().endInteraction(player.getUniqueId());
 
         // Clear the ActionBar
