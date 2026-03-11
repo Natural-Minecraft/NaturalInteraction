@@ -166,4 +166,17 @@ public class InteractionListener implements Listener {
                     .toComponent("&cKamu belum bisa menggunakan command di dunia ini. Selesaikan prologue-nya!"));
         }
     }
+
+    /**
+     * Clean up session on player disconnect — prevents inventory corruption
+     */
+    @EventHandler
+    public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
+        if (session != null) {
+            // Force cleanup without rewards — player must redo the interaction
+            session.forceCleanup();
+        }
+    }
 }

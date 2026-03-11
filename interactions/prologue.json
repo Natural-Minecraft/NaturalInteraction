@@ -206,30 +206,6 @@
                     "value": "gamemode survival %player%"
                 },
                 {
-                    "type": "COMMAND",
-                    "value": "give %player% wooden_sword 1"
-                },
-                {
-                    "type": "COMMAND",
-                    "value": "give %player% wooden_pickaxe 1"
-                },
-                {
-                    "type": "COMMAND",
-                    "value": "give %player% wooden_axe 1"
-                },
-                {
-                    "type": "COMMAND",
-                    "value": "give %player% wooden_shovel 1"
-                },
-                {
-                    "type": "COMMAND",
-                    "value": "give %player% cooked_beef 16"
-                },
-                {
-                    "type": "COMMAND",
-                    "value": "give %player% golden_shovel 1"
-                },
-                {
                     "type": "SOUND",
                     "value": "ENTITY_ENDERMAN_TELEPORT,1.0,1.0"
                 },
@@ -258,6 +234,31 @@
             "giveReward": false
         }
     },
-    "rewards": [],
+    "rewards": [
+        {
+            "type": "wooden_sword",
+            "amount": 1
+        },
+        {
+            "type": "wooden_pickaxe",
+            "amount": 1
+        },
+        {
+            "type": "wooden_axe",
+            "amount": 1
+        },
+        {
+            "type": "wooden_shovel",
+            "amount": 1
+        },
+        {
+            "type": "golden_shovel",
+            "amount": 1
+        },
+        {
+            "type": "cooked_beef",
+            "amount": 16
+        }
+    ],
     "commandRewards": []
 }

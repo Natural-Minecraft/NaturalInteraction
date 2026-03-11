@@ -104,7 +104,6 @@ public class InteractionSession {
         cancelAllTasks();
         this.currentNode = node;
         this.displayingOptions = false;
-        this.player.getInventory().clear();
 
         // Execute Actions (Instant) — SCREENEFFECT etc. run immediately
         executeActions(node);
@@ -553,6 +552,49 @@ public class InteractionSession {
         selectOption(currentNode.getOptions().get(index));
     }
 
+    /**
+     * Force cleanup on disconnect — restore inventory, remove effects, but do NOT give rewards.
+     * This prevents inventory corruption when players disconnect mid-interaction.
+     */
+    public void forceCleanup() {
+        if (bossBar != null && player.isOnline())
+            player.hideBossBar(bossBar);
+        cancelAllTasks();
+        cleanupChoices();
+        removeCinematicLock();
+
+        // Safety: remove invisibility
+        player.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
+        player.setInvisible(false);
+
+        // Restore original inventory (the one BEFORE interaction started)
+        if (originalInventory != null && player.isOnline()) {
+            player.getInventory().setContents(originalInventory);
+        }
+
+        // Clear ActionBar
+        if (player.isOnline()) {
+            player.sendActionBar(Component.empty());
+        }
+
+        // Remove session from manager
+        plugin.getInteractionManager().endInteraction(player.getUniqueId());
+
+        // Reset NPC hologram back to "????" for prologue
+        if ("prologue".equals(interaction.getId())) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "npc select 69");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "npc hologram set 0 &8&l????");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "npc deselect");
+        }
+    }
+
+    /**
+     * Get the original inventory saved at session start
+     */
+    public org.bukkit.inventory.ItemStack[] getOriginalInventory() {
+        return originalInventory;
+    }
+
     public void end() {
         if (bossBar != null)
             player.hideBossBar(bossBar);
@@ -564,8 +606,8 @@ public class InteractionSession {
         player.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
         player.setInvisible(false);
 
-        // Restore inventory
-        if (originalInventory != null) {
+        // Restore inventory if we were displaying options (which clears inventory)
+        if (displayingOptions && originalInventory != null) {
             player.getInventory().setContents(originalInventory);
         }
 
@@ -575,7 +617,8 @@ public class InteractionSession {
                 plugin.getPrologueJoinListener();
         boolean restoredFromJoin = false;
         if (prologueListener != null && prologueListener.hasSavedData(player.getUniqueId())) {
-            restoredFromJoin = prologueListener.restorePlayerData(player);
+            // Restore inventory but skip teleport (let node actions handle it, e.g. /spawn)
+            restoredFromJoin = prologueListener.restorePlayerData(player, false);
         }
 
         plugin.getInteractionManager().endInteraction(player.getUniqueId());

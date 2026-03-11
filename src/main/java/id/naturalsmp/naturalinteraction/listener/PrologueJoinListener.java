@@ -62,14 +62,16 @@ public class PrologueJoinListener implements Listener {
                 if (!tracker.hasCompleted(player.getUniqueId(), PROLOGUE_ID)) {
                     // Player hasn't done prologue — save data and teleport to story_sky
 
-                    // Only save if not already in story_sky (prevent double-save on re-join)
-                    if (!player.getWorld().getName().equalsIgnoreCase("story_sky")) {
+                    // Only save if not already in story_sky AND no existing save
+                    // (prevent overwriting good save with corrupted data on re-join)
+                    if (!player.getWorld().getName().equalsIgnoreCase("quest_sky")
+                            && !hasSavedData(player.getUniqueId())) {
                         savePlayerData(player);
                     }
 
-                    // Teleport to story_sky via Multiverse
+                    // Teleport to quest_sky via Multiverse
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                            "mvtp " + player.getName() + " story_sky");
+                            "mvtp " + player.getName() + " quest_sky");
 
                     player.sendMessage(Component.text("✦ ", NamedTextColor.GOLD)
                             .append(Component.text("Kamu harus menyelesaikan prologue terlebih dahulu!", NamedTextColor.YELLOW)));
@@ -111,6 +113,10 @@ public class PrologueJoinListener implements Listener {
      * Returns true if data was restored.
      */
     public boolean restorePlayerData(Player player) {
+        return restorePlayerData(player, true);
+    }
+
+    public boolean restorePlayerData(Player player, boolean teleport) {
         File file = new File(savedDataFolder, player.getUniqueId().toString() + ".json");
         if (!file.exists()) return false;
 
@@ -129,7 +135,7 @@ public class PrologueJoinListener implements Listener {
             float pitch = ((Number) data.get("pitch")).floatValue();
 
             org.bukkit.World world = Bukkit.getWorld(worldName);
-            if (world != null) {
+            if (world != null && teleport) {
                 Location restoreLoc = new Location(world, x, y, z, yaw, pitch);
                 player.teleport(restoreLoc);
             }
@@ -139,7 +145,18 @@ public class PrologueJoinListener implements Listener {
                 @SuppressWarnings("unchecked")
                 java.util.List<Map<String, Object>> invData = (java.util.List<Map<String, Object>>) data.get("inventory");
                 ItemStack[] contents = deserializeInventory(invData);
-                player.getInventory().setContents(contents);
+                // Only restore if original was not empty OR player has nothing currently
+                boolean originalWasEmpty = true;
+                for (ItemStack item : contents) {
+                    if (item != null) {
+                        originalWasEmpty = false;
+                        break;
+                    }
+                }
+                
+                if (!originalWasEmpty) {
+                    player.getInventory().setContents(contents);
+                }
             }
 
             if (data.containsKey("armor")) {
