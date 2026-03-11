@@ -150,6 +150,15 @@ public class InteractionListener implements Listener {
             return;
         }
 
+        // Block ALL commands for players who haven't completed prologue
+        if (!plugin.getInteractionManager().getCompletionTracker()
+                .hasCompleted(player.getUniqueId(), "prologue")) {
+            event.setCancelled(true);
+            player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
+                    .toComponent("&cKamu harus menyelesaikan prologue terlebih dahulu!"));
+            return;
+        }
+
         // Specific block for quest_sky world
         if (player.getWorld().getName().equalsIgnoreCase("quest_sky")) {
             event.setCancelled(true);
