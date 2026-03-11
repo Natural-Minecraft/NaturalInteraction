@@ -26,7 +26,7 @@ import java.util.UUID;
 
 /**
  * Forces all players to complete the prologue interaction before playing.
- * On join: if prologue not completed, save inventory & location, then teleport to story_sky.
+ * On join: if prologue not completed, save inventory & location, then teleport to quest_sky.
  * After prologue completes, the player's inventory & location are restored.
  */
 public class PrologueJoinListener implements Listener {
@@ -60,9 +60,9 @@ public class PrologueJoinListener implements Listener {
                 if (!player.isOnline()) return;
 
                 if (!tracker.hasCompleted(player.getUniqueId(), PROLOGUE_ID)) {
-                    // Player hasn't done prologue — save data and teleport to story_sky
+                    // Player hasn't done prologue — save data and teleport to quest_sky
 
-                    // Only save if not already in story_sky AND no existing save
+                    // Only save if not already in quest_sky AND no existing save
                     // (prevent overwriting good save with corrupted data on re-join)
                     if (!player.getWorld().getName().equalsIgnoreCase("quest_sky")
                             && !hasSavedData(player.getUniqueId())) {
