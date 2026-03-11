@@ -26,7 +26,7 @@ import java.util.UUID;
 
 /**
  * Forces all players to complete the prologue interaction before playing.
- * On join: if prologue not completed, save inventory & location, then teleport to quest_sky.
+ * On join: if prologue not completed, save inventory & location, then teleport to story_sky.
  * After prologue completes, the player's inventory & location are restored.
  */
 public class PrologueJoinListener implements Listener {
@@ -60,18 +60,18 @@ public class PrologueJoinListener implements Listener {
                 if (!player.isOnline()) return;
 
                 if (!tracker.hasCompleted(player.getUniqueId(), PROLOGUE_ID)) {
-                    // Player hasn't done prologue — save data and teleport to quest_sky
+                    // Player hasn't done prologue — save data and teleport to story_sky
 
-                    // Only save if not already in quest_sky AND no existing save
+                    // Only save if not already in story_sky AND no existing save
                     // (prevent overwriting good save with corrupted data on re-join)
-                    if (!player.getWorld().getName().equalsIgnoreCase("quest_sky")
+                    if (!player.getWorld().getName().equalsIgnoreCase("story_sky")
                             && !hasSavedData(player.getUniqueId())) {
                         savePlayerData(player);
                     }
 
-                    // Teleport to quest_sky via Multiverse
+                    // Teleport to story_sky via Multiverse
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                            "mvtp " + player.getName() + " quest_sky");
+                            "mvtp " + player.getName() + " story_sky");
 
                     player.sendMessage(Component.text("✦ ", NamedTextColor.GOLD)
                             .append(Component.text("Kamu harus menyelesaikan prologue terlebih dahulu!", NamedTextColor.YELLOW)));
@@ -145,7 +145,8 @@ public class PrologueJoinListener implements Listener {
                 @SuppressWarnings("unchecked")
                 java.util.List<Map<String, Object>> invData = (java.util.List<Map<String, Object>>) data.get("inventory");
                 ItemStack[] contents = deserializeInventory(invData);
-                // Only restore if original was not empty OR player has nothing currently
+                
+                // Only restore if original was not empty
                 boolean originalWasEmpty = true;
                 for (ItemStack item : contents) {
                     if (item != null) {
