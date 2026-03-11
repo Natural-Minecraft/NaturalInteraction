@@ -64,14 +64,14 @@ public class PrologueJoinListener implements Listener {
 
                     // Only save if not already in story_sky AND no existing save
                     // (prevent overwriting good save with corrupted data on re-join)
-                    if (!player.getWorld().getName().equalsIgnoreCase("quest_sky")
+                    if (!player.getWorld().getName().equalsIgnoreCase("story_sky")
                             && !hasSavedData(player.getUniqueId())) {
                         savePlayerData(player);
                     }
 
-                    // Teleport to quest_sky via Multiverse
+                    // Teleport to story_sky via Multiverse
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                            "mvtp " + player.getName() + " quest_sky");
+                            "mvtp " + player.getName() + " story_sky");
 
                     player.sendMessage(Component.text("✦ ", NamedTextColor.GOLD)
                             .append(Component.text("Kamu harus menyelesaikan prologue terlebih dahulu!", NamedTextColor.YELLOW)));
