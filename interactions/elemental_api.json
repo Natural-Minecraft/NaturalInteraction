@@ -1,0 +1,74 @@
+{
+  "id": "elemental_api",
+  "name": "&c&lAvatar Api",
+  "rootNodeId": "root_check",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "root_check": {
+      "id": "root_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "elemental_api,node_done" },
+        { "type": "JUMP_IF_TAG", "value": "elemental_air,node_fourth" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_fail"
+    },
+    "node_fail": {
+      "id": "node_fail",
+      "text": "Panasnya egomu membakar urutan yang benar! Segala kerja kerasmu hangus!",
+      "options": [],
+      "actions": [
+        { "type": "SOUND", "value": "entity_lightning_bolt_thunder,1.0,0.5" },
+        { "type": "SOUND", "value": "entity_wither_spawn,1.0,0.5" },
+        { "type": "EFFECT", "value": "SLOWNESS,60,1" },
+        { "type": "REMOVE_TAG", "value": "elemental_angin" },
+        { "type": "REMOVE_TAG", "value": "elemental_tanah" },
+        { "type": "REMOVE_TAG", "value": "elemental_air" },
+        { "type": "REMOVE_TAG", "value": "elemental_api" },
+        { "type": "MESSAGE", "value": "&c[Gagal] &fUrutan salah! Urutan ter-reset." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_fourth": {
+      "id": "node_fourth",
+      "text": "Api menyala dalam harmoni. Angin, Tanah, dan Air telah mengantarkanmu kemari. Engkau adalah penerus sejati.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "elemental_api" },
+        { "type": "COMMAND", "value": "nacore givesuffix %player% avatar" },
+        { "type": "SOUND", "value": "entity_ender_dragon_death,1.0,1.0" },
+        { "type": "MESSAGE", "value": "&c[4/4] &fUrutan Sempurna! &6Kamu mendapatkan suffix AVATAR!" }
+      ],
+      "durationSeconds": 8,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Api semangatmu membara, Sang Avatar.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}

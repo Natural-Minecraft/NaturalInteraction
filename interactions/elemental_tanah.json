@@ -1,0 +1,73 @@
+{
+  "id": "elemental_tanah",
+  "name": "&a&lAvatar Bumi",
+  "rootNodeId": "root_check",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "root_check": {
+      "id": "root_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "elemental_tanah,node_done" },
+        { "type": "JUMP_IF_TAG", "value": "elemental_angin,node_second" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_fail"
+    },
+    "node_fail": {
+      "id": "node_fail",
+      "text": "Langkahmu terlampau berat! Kamu tidak mengikuti urutan alam semula jadi!",
+      "options": [],
+      "actions": [
+        { "type": "SOUND", "value": "entity_lightning_bolt_thunder,1.0,0.5" },
+        { "type": "SOUND", "value": "entity_wither_spawn,1.0,0.5" },
+        { "type": "EFFECT", "value": "SLOWNESS,60,1" },
+        { "type": "REMOVE_TAG", "value": "elemental_angin" },
+        { "type": "REMOVE_TAG", "value": "elemental_tanah" },
+        { "type": "REMOVE_TAG", "value": "elemental_air" },
+        { "type": "REMOVE_TAG", "value": "elemental_api" },
+        { "type": "MESSAGE", "value": "&c[Gagal] &fUrutan salah! Urutan ter-reset." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_second": {
+      "id": "node_second",
+      "text": "Kekokohan bumi memijak kakimu. Angin membawamu kemari dengan tepat.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "elemental_tanah" },
+        { "type": "SOUND", "value": "block_beacon_activate,1.0,2.0" },
+        { "type": "MESSAGE", "value": "&a[2/4] &fMenyentuh elemen Tanah." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Bumi memberimu landasan yang kokoh.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}

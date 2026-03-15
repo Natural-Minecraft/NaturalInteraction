@@ -1,0 +1,73 @@
+{
+  "id": "elemental_air",
+  "name": "&b&lAvatar Air",
+  "rootNodeId": "root_check",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "root_check": {
+      "id": "root_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "elemental_air,node_done" },
+        { "type": "JUMP_IF_TAG", "value": "elemental_tanah,node_third" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_fail"
+    },
+    "node_fail": {
+      "id": "node_fail",
+      "text": "Aliranmu keruh! Kamu tak menghargai proses alam!",
+      "options": [],
+      "actions": [
+        { "type": "SOUND", "value": "entity_lightning_bolt_thunder,1.0,0.5" },
+        { "type": "SOUND", "value": "entity_wither_spawn,1.0,0.5" },
+        { "type": "EFFECT", "value": "SLOWNESS,60,1" },
+        { "type": "REMOVE_TAG", "value": "elemental_angin" },
+        { "type": "REMOVE_TAG", "value": "elemental_tanah" },
+        { "type": "REMOVE_TAG", "value": "elemental_air" },
+        { "type": "REMOVE_TAG", "value": "elemental_api" },
+        { "type": "MESSAGE", "value": "&c[Gagal] &fUrutan salah! Urutan ter-reset." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_third": {
+      "id": "node_third",
+      "text": "Gemericik air menyambut kedatanganmu dari bumi yang berpijak.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "elemental_air" },
+        { "type": "SOUND", "value": "block_beacon_activate,1.0,2.0" },
+        { "type": "MESSAGE", "value": "&9[3/4] &fMenyentuh elemen Air." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Air telah menyucikan jalanmu.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}

@@ -1,0 +1,52 @@
+{
+  "id": "elemental_angin",
+  "name": "&f&lAvatar Udara",
+  "rootNodeId": "node_start",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "node_start": {
+      "id": "node_start",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "elemental_angin,node_done" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_first"
+    },
+    "node_first": {
+      "id": "node_first",
+      "text": "Rasakan hembusan kebebasan. Aku adalah tiupan angin pertama.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "elemental_angin" },
+        { "type": "SOUND", "value": "block_beacon_activate,1.0,2.0" },
+        { "type": "MESSAGE", "value": "&b[1/4] &fMenyentuh elemen Udara." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Angin telah memberkatimu. Lanjutkan perjalananmu.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}
