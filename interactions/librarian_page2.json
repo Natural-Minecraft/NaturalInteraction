@@ -1,0 +1,76 @@
+{
+  "id": "librarian_page2",
+  "name": "&a&lWarga",
+  "rootNodeId": "root_check",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "root_check": {
+      "id": "root_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "found_page_2,node_done" },
+        { "type": "JUMP_IF_TAG", "value": "librarian_quest_started,node_give_page" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_idle"
+    },
+    "node_idle": {
+      "id": "node_idle",
+      "text": "Sepertinya akan turun hujan...",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_give_page": {
+      "id": "node_give_page",
+      "text": "Hai! Ada apa terburu-buru? Oh, mencari kertas jurnal? Tadi terjatuh tepat di kepalaku. Ini ambillah.",
+      "options": [
+        { "text": "Terima kasih banyak!", "targetNodeId": "node_received" }
+      ],
+      "durationSeconds": 8,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_received": {
+      "id": "node_received",
+      "text": "Sama-sama. Hati-hati di jalan.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "found_page_2" },
+        { "type": "SOUND", "value": "entity_item_pickup,1.0,1.0" },
+        { "type": "ACTIONBAR", "value": "&aMendapatkan Halaman Jurnal 2!" },
+        { "type": "MESSAGE", "value": "&e[Sidequest] &fKamu menemukan Halaman 2." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Semoga sisa kertasnya segera ketemu ya.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}

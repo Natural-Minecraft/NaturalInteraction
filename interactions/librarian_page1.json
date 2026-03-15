@@ -1,0 +1,76 @@
+{
+  "id": "librarian_page1",
+  "name": "&a&lWarga",
+  "rootNodeId": "root_check",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "root_check": {
+      "id": "root_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "found_page_1,node_done" },
+        { "type": "JUMP_IF_TAG", "value": "librarian_quest_started,node_give_page" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_idle"
+    },
+    "node_idle": {
+      "id": "node_idle",
+      "text": "Cuaca hari ini cukup berangin ya...",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_give_page": {
+      "id": "node_give_page",
+      "text": "Halo, apakah kamu sedang mencari sesuatu? Tadi ada selembar kertas aneh terbang ke arahku. Mungkin ini yang kamu cari.",
+      "options": [
+        { "text": "Ya, itu punya Pustakawan! Terima kasih.", "targetNodeId": "node_received" }
+      ],
+      "durationSeconds": 8,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_received": {
+      "id": "node_received",
+      "text": "Sama-sama. Kertas itu penuh dengan tulisan yang tidak kupahami.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "found_page_1" },
+        { "type": "SOUND", "value": "entity_item_pickup,1.0,1.0" },
+        { "type": "ACTIONBAR", "value": "&aMendapatkan Halaman Jurnal 1!" },
+        { "type": "MESSAGE", "value": "&e[Sidequest] &fKamu menemukan Halaman 1." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Syukurlah kertas itu kembali pada pemilik aslinya.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}

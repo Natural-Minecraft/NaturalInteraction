@@ -1,0 +1,117 @@
+{
+  "id": "librarian_main",
+  "name": "&e&lLibrarian",
+  "rootNodeId": "root_check",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "root_check": {
+      "id": "root_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "librarian_quest_done,node_done" },
+        { "type": "JUMP_IF_NOT_TAG", "value": "librarian_quest_started,node_start" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_check_pages"
+    },
+    "node_start": {
+      "id": "node_start",
+      "text": "Aduh gawat! 3 Halaman jurnal rahasiaku tertiup angin kencang barusan... Tolong, apa kamu bisa membantuku mencarinya?",
+      "options": [
+        { "text": "Tentu, aku akan mencarinya!", "targetNodeId": "node_accept" },
+        { "text": "Maaf, aku sedang sibuk.", "targetNodeId": "node_decline" }
+      ],
+      "durationSeconds": 10,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_accept": {
+      "id": "node_accept",
+      "text": "Terima kasih banyak! Coba tanyakan pada orang-orang di sekitar sini, mungkin mereka melihatnya terbang.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "librarian_quest_started" },
+        { "type": "MESSAGE", "value": "&a[Sidequest] Jurnal Pustakawan dimulai! Cari 3 halaman yang hilang." }
+      ],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_decline": {
+      "id": "node_decline",
+      "text": "Ah... baiklah, aku akan mencarinya sendiri nanti.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_check_pages": {
+      "id": "node_check_pages",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_NOT_TAG", "value": "found_page_1,node_missing" },
+        { "type": "JUMP_IF_NOT_TAG", "value": "found_page_2,node_missing" },
+        { "type": "JUMP_IF_NOT_TAG", "value": "found_page_3,node_missing" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_complete"
+    },
+    "node_missing": {
+      "id": "node_missing",
+      "text": "Sepertinya kamu belum menemukan ketiga halamannya... Tolong bantu aku pelan-pelan ya.",
+      "options": [],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_complete": {
+      "id": "node_complete",
+      "text": "Wah! Ini benar semua halaman jurnal rahasiaku! Terima kasih banyak anak muda, ini sedikit imbalan untuk kerja kerasmu.",
+      "options": [],
+      "actions": [
+        { "type": "COMMAND", "value": "xp add %player% 10 levels" },
+        { "type": "ADD_TAG", "value": "librarian_quest_done" },
+        { "type": "SOUND", "value": "ui_toast_challenge_complete,1.0,1.0" },
+        { "type": "MESSAGE", "value": "&e&lMisi Selesai: &fJurnal Pustakawan." }
+      ],
+      "durationSeconds": 8,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Terima kasih atas bantuanmu mencari jurnalku tempo hari. Sangat kucoba untuk menjaganya dengan baik sekarang.",
+      "options": [],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}
