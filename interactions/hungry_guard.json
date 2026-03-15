@@ -1,0 +1,141 @@
+{
+  "id": "hungry_guard",
+  "name": "&c&lPenjaga Misterius",
+  "rootNodeId": "root_check",
+  "dialogueUnicode": "",
+  "cooldownSeconds": 0,
+  "mandatory": false,
+  "oneTimeReward": true,
+  "nodes": {
+    "root_check": {
+      "id": "root_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_TAG", "value": "guard_fed,node_done" },
+        { "type": "JUMP_IF_TAG", "value": "guard_quest_started,node_quest_check" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_start"
+    },
+    "node_start": {
+      "id": "node_start",
+      "text": "Berhenti! Area di belakangku ini ditutup untuk umum... Hahhh... kecuali kalau kamu punya makanan enak. Perutku keroncongan dari pagi.",
+      "options": [
+        { "text": "Makanan seperti apa yang kamu mau?", "targetNodeId": "node_hint" },
+        { "text": "Maaf aku tidak punya makanan.", "targetNodeId": "node_decline" }
+      ],
+      "durationSeconds": 10,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_hint": {
+      "id": "node_hint",
+      "text": "Hmm... Aku sangat mengidamkan Hamburger yang tebal dan juicy. Tunggu, aku catat resepnya dulu untukmu.",
+      "options": [
+        { "text": "[Ambil Buku Resep Hamburger]", "targetNodeId": "node_accept" }
+      ],
+      "durationSeconds": 8,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_accept": {
+      "id": "node_accept",
+      "text": "Nah, pelajari resep itu baik-baik. Kalau kamu berhasil membuatnya, aku tidak hanya akan mengizinkanmu masuk, tapi juga memberikan kotak rahasia milikku.",
+      "options": [],
+      "actions": [
+        { "type": "ADD_TAG", "value": "guard_quest_started" },
+        { "type": "COMMAND", "value": "give %player% written_book{pages:['{\"text\":\"Resep Hamburger:\\n\\n1. Tanam Tomato \u0026 Lettuce dari toko benih di /warp pasar.\\n2. Beli Plastic.\\n3. Sliced Bread: 1 Knife (Iron Nugget + Stick) + 1 Bread.\\n4. Ketchup: 6 Plastic Plate (dari 3 Plastic) + 3 Tomato.\\n\\nCrafter:\\n- Atas\u0026Bawah Tengah: Sliced Bread\\n- Kiri: Tomato, Kanan: Lettuce\\n- Tengah: Steak\\n- Pojok Bawah Kanan: Ketchup\"}'],title:\"Resep Hamburger\",author:\"Penjaga Lapar\"} 1" },
+        { "type": "MESSAGE", "value": "&a[Sidequest] Camilan Penjaga dimulai! Buatlah 1 Hamburger." }
+      ],
+      "durationSeconds": 10,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_decline": {
+      "id": "node_decline",
+      "text": "Ya sudah, menjauhlah dariku. Baumu membuatku pusing.",
+      "options": [],
+      "durationSeconds": 3,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_quest_check": {
+      "id": "node_quest_check",
+      "text": "",
+      "options": [],
+      "actions": [
+        { "type": "JUMP_IF_ITEM", "value": "iasurvival:hamburger,1,node_quest_complete" }
+      ],
+      "durationSeconds": 0,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 0,
+      "nextNodeId": "node_quest_missing"
+    },
+    "node_quest_missing": {
+      "id": "node_quest_missing",
+      "text": "Mana hamburgernya? Apakah bahan-bahannya sesulit itu didapat? Ingat, kamu butuh Roti Iris, Tomat, Selada, Steak, dan Saus Tomat.",
+      "options": [],
+      "durationSeconds": 8,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_quest_complete": {
+      "id": "node_quest_complete",
+      "text": "Wah! Aroma ini... Ini benar-benar Hamburger sempurna! Terima kasih, sobat!",
+      "options": [
+        { "text": "Sama-sama! Sekarang izinkan aku lewat.", "targetNodeId": "node_reward" }
+      ],
+      "durationSeconds": 8,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_reward": {
+      "id": "node_reward",
+      "text": "Sesuai janji, ini kotak hartaku untukmu. Di belakangku ini ada jalur parkour rahasia, silakan masuk. Hati-hati jangan sampai jatuh!",
+      "options": [],
+      "actions": [
+        { "type": "TAKE_ITEM", "value": "iasurvival:hamburger,1" },
+        { "type": "ADD_TAG", "value": "guard_fed" },
+        { "type": "COMMAND", "value": "essentials:kit burger_reward %player%" },
+        { "type": "SOUND", "value": "entity_player_levelup,1.0,1.0" },
+        { "type": "MESSAGE", "value": "&e&lMisi Selesai: &fCamilan Sang Penjaga." }
+      ],
+      "durationSeconds": 10,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    },
+    "node_done": {
+      "id": "node_done",
+      "text": "Silakan masuk ke area parkour kapan saja, sobat! Hamburger buatanmu tak tertandingi.",
+      "options": [],
+      "durationSeconds": 5,
+      "skippable": true,
+      "giveReward": false,
+      "commandRewards": [],
+      "delayBeforeNext": 20
+    }
+  },
+  "rewards": [],
+  "commandRewards": []
+}
