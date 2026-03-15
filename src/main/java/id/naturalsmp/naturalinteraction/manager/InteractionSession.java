@@ -570,6 +570,7 @@ public class InteractionSession {
         // Restore original inventory (the one BEFORE interaction started)
         if (originalInventory != null && player.isOnline()) {
             player.getInventory().setContents(originalInventory);
+            player.updateInventory();
         }
 
         // Clear ActionBar
@@ -621,6 +622,7 @@ public class InteractionSession {
                 // Returning player: restore their saved inventory
                 player.getInventory().setContents(originalInventory);
             }
+            player.updateInventory();
             // New player (empty original): inventory stays clear, rewards given below
         }
 
@@ -677,6 +679,7 @@ public class InteractionSession {
             }
 
             if (given) {
+                player.updateInventory();
                 player.sendMessage(Component.text("✨ ", NamedTextColor.GOLD)
                         .append(Component.text("Kamu mendapatkan hadiah!", NamedTextColor.GREEN)));
             }
