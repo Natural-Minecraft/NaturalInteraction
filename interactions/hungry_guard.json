@@ -53,7 +53,7 @@
       "options": [],
       "actions": [
         { "type": "ADD_TAG", "value": "guard_quest_started" },
-        { "type": "COMMAND", "value": "give %player% written_book{pages:['{\"text\":\"Resep Hamburger:\\n\\n1. Tanam Tomato \u0026 Lettuce dari toko benih di /warp pasar.\\n2. Beli Plastic.\\n3. Sliced Bread: 1 Knife (Iron Nugget + Stick) + 1 Bread.\\n4. Ketchup: 6 Plastic Plate (dari 3 Plastic) + 3 Tomato.\\n\\nCrafter:\\n- Atas\u0026Bawah Tengah: Sliced Bread\\n- Kiri: Tomato, Kanan: Lettuce\\n- Tengah: Steak\\n- Pojok Bawah Kanan: Ketchup\"}'],title:\"Resep Hamburger\",author:\"Penjaga Lapar\"} 1" },
+        { "type": "COMMAND", "value": "minecraft:give %player% written_book{pages:['{\"text\":\"Resep Hamburger:\\n\\n1. Tanam Tomato \u0026 Lettuce dari toko benih di /warp pasar.\\n2. Beli Plastic.\\n3. Sliced Bread: 1 Knife (Iron Nugget + Stick) + 1 Bread.\\n4. Ketchup: 6 Plastic Plate (dari 3 Plastic) + 3 Tomato.\\n\\nCrafter:\\n- Atas\u0026Bawah Tengah: Sliced Bread\\n- Kiri: Tomato, Kanan: Lettuce\\n- Tengah: Steak\\n- Pojok Bawah Kanan: Ketchup\"}'],title:\"Resep Hamburger\",author:\"Penjaga Lapar\"} 1" },
         { "type": "MESSAGE", "value": "&a[Sidequest] Camilan Penjaga dimulai! Buatlah 1 Hamburger." }
       ],
       "durationSeconds": 10,
@@ -110,12 +110,12 @@
     },
     "node_reward": {
       "id": "node_reward",
-      "text": "Sesuai janji, ini kotak hartaku untukmu. Di belakangku ini ada jalur parkour rahasia, silakan masuk. Hati-hati jangan sampai jatuh!",
+      "text": "Okee, kamu dapat akses hamburger per hari! cek [/kit]",
       "options": [],
       "actions": [
         { "type": "TAKE_ITEM", "value": "iasurvival:hamburger,1" },
         { "type": "ADD_TAG", "value": "guard_fed" },
-        { "type": "COMMAND", "value": "essentials:kit burger_reward %player%" },
+        { "type": "COMMAND", "value": "lp user %player% permission set playerkits.kit.burger_kit true" },
         { "type": "SOUND", "value": "entity_player_levelup,1.0,1.0" },
         { "type": "MESSAGE", "value": "&e&lMisi Selesai: &fCamilan Sang Penjaga." }
       ],
@@ -127,7 +127,7 @@
     },
     "node_done": {
       "id": "node_done",
-      "text": "Silakan masuk ke area parkour kapan saja, sobat! Hamburger buatanmu tak tertandingi.",
+      "text": "Silakan cek kit harianmu di /kit, sobat! Hamburger buatanmu tak tertandingi.",
       "options": [],
       "durationSeconds": 5,
       "skippable": true,
