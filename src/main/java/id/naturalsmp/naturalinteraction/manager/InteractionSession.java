@@ -69,6 +69,10 @@ public class InteractionSession {
             start();
             return;
         }
+
+        // Save inventory
+        originalInventory = player.getInventory().getContents();
+
         applyCinematicLock();
         playNode(node);
     }
@@ -610,18 +614,9 @@ public class InteractionSession {
         // Restore inventory: check if original had items (returning player)
         // If original was empty (new player), just clear leftover papers
         if (originalInventory != null) {
-            boolean originalWasEmpty = true;
-            for (org.bukkit.inventory.ItemStack item : originalInventory) {
-                if (item != null) {
-                    originalWasEmpty = false;
-                    break;
-                }
-            }
             player.getInventory().clear(); // Always clear leftover papers
-            if (!originalWasEmpty) {
-                // Returning player: restore their saved inventory
-                player.getInventory().setContents(originalInventory);
-            }
+            // Restore their saved inventory
+            player.getInventory().setContents(originalInventory);
             player.updateInventory();
             // New player (empty original): inventory stays clear, rewards given below
         }
