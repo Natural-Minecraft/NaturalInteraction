@@ -15,9 +15,9 @@ import java.time.Duration;
 
 public class ActionExecutor {
 
-    public static void execute(Player player, Action action) {
+    public static String execute(Player player, Action action, id.naturalsmp.naturalinteraction.NaturalInteraction plugin) {
         if (action == null || action.getType() == null)
-            return;
+            return null;
 
         String value = action.getValue();
         if (value == null)
@@ -139,9 +139,127 @@ public class ActionExecutor {
                         player.setInvisible(false);
                     }
                     break;
+                case ADD_TAG:
+                    if (plugin != null) {
+                        plugin.getInteractionManager().getTagTracker().addTag(player.getUniqueId(), value);
+                    }
+                    break;
+                case REMOVE_TAG:
+                    if (plugin != null) {
+                        plugin.getInteractionManager().getTagTracker().removeTag(player.getUniqueId(), value);
+                    }
+                    break;
+                case JUMP_IF_TAG:
+                    // value: "tag_name,target_node_id"
+                    if (plugin != null) {
+                        String[] partsJump = value.split(",");
+                        if (partsJump.length == 2) {
+                            if (plugin.getInteractionManager().getTagTracker().hasTag(player.getUniqueId(), partsJump[0])) {
+                                return partsJump[1];
+                            }
+                        }
+                    }
+                    break;
+                case JUMP_IF_NOT_TAG:
+                    // value: "tag_name,target_node_id"
+                    if (plugin != null) {
+                        String[] partsJumpN = value.split(",");
+                        if (partsJumpN.length == 2) {
+                            if (!plugin.getInteractionManager().getTagTracker().hasTag(player.getUniqueId(), partsJumpN[0])) {
+                                return partsJumpN[1];
+                            }
+                        }
+                    }
+                    break;
+                case TAKE_ITEM:
+                    // value: "material|ia_id,amount"
+                    String[] takeParts = value.split(",");
+                    if (takeParts.length >= 2) {
+                        String itemStr = takeParts[0];
+                        int amount = Integer.parseInt(takeParts[1]);
+                        takePlayerItem(player, itemStr, amount);
+                    }
+                    break;
+                case JUMP_IF_ITEM:
+                    // value: "material|ia_id,amount,target_node_id"
+                    String[] jiParts = value.split(",");
+                    if (jiParts.length == 3) {
+                        String itemStr = jiParts[0];
+                        int amount = Integer.parseInt(jiParts[1]);
+                        if (hasPlayerItem(player, itemStr, amount)) {
+                            return jiParts[2];
+                        }
+                    }
+                    break;
+                case JUMP_IF_NOT_ITEM:
+                    // value: "material|ia_id,amount,target_node_id"
+                    String[] jinParts = value.split(",");
+                    if (jinParts.length == 3) {
+                        String itemStr = jinParts[0];
+                        int amount = Integer.parseInt(jinParts[1]);
+                        if (!hasPlayerItem(player, itemStr, amount)) {
+                            return jinParts[2];
+                        }
+                    }
+                    break;
             }
         } catch (Exception e) {
             Bukkit.getLogger().warning("Failed to execute action " + action.getType() + ": " + e.getMessage());
         }
+        return null;
+    }
+
+    private static boolean hasPlayerItem(Player player, String itemString, int amount) {
+        int count = 0;
+        for (org.bukkit.inventory.ItemStack item : player.getInventory().getContents()) {
+            if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
+
+            if (itemString.contains(":")) {
+                // ItemsAdder item
+                dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
+                if (customStack != null && customStack.getNamespacedID().equalsIgnoreCase(itemString)) {
+                    count += item.getAmount();
+                }
+            } else {
+                // Vanilla item
+                if (item.getType().name().equalsIgnoreCase(itemString)) {
+                    count += item.getAmount();
+                }
+            }
+        }
+        return count >= amount;
+    }
+
+    private static void takePlayerItem(Player player, String itemString, int amount) {
+        int remaining = amount;
+        org.bukkit.inventory.ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            org.bukkit.inventory.ItemStack item = contents[i];
+            if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
+
+            boolean match = false;
+            if (itemString.contains(":")) {
+                dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
+                if (customStack != null && customStack.getNamespacedID().equalsIgnoreCase(itemString)) {
+                    match = true;
+                }
+            } else {
+                if (item.getType().name().equalsIgnoreCase(itemString)) {
+                    match = true;
+                }
+            }
+
+            if (match) {
+                if (item.getAmount() <= remaining) {
+                    remaining -= item.getAmount();
+                    player.getInventory().setItem(i, null);
+                } else {
+                    item.setAmount(item.getAmount() - remaining);
+                    remaining = 0;
+                }
+                if (remaining <= 0) break;
+            }
+        }
+        player.updateInventory();
     }
 }

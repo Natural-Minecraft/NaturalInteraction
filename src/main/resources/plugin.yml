@@ -12,6 +12,8 @@ commands:
     description: Main command for interactions
     usage: /interaction <subcommand>
     aliases: [inter, ni]
-  story:
     description: View your story progress
     usage: /story
+  sidequest:
+    description: View your active sidequests
+    usage: /sidequest

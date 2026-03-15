@@ -46,6 +46,10 @@ public final class NaturalInteraction extends JavaPlugin {
         getCommand("interaction").setExecutor(cmd);
         getCommand("interaction").setTabCompleter(cmd);
         getCommand("story").setExecutor(new id.naturalsmp.naturalinteraction.commands.StoryCommand(this));
+        
+        if (getCommand("sidequest") != null) {
+            getCommand("sidequest").setExecutor(new id.naturalsmp.naturalinteraction.command.SidequestCommand(this));
+        }
 
         getLogger().info(
                 ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>has been enabled!"));

@@ -110,7 +110,14 @@ public class InteractionSession {
         this.displayingOptions = false;
 
         // Execute Actions (Instant) — SCREENEFFECT etc. run immediately
-        executeActions(node);
+        String jumpNodeId = executeActions(node);
+        if (jumpNodeId != null) {
+            DialogueNode targetNode = interaction.getNode(jumpNodeId);
+            if (targetNode != null) {
+                playNode(targetNode);
+                return;
+            }
+        }
 
         // Execute Per-Node Rewards
         executeNodeRewards(node);
@@ -451,10 +458,14 @@ public class InteractionSession {
         }
     }
 
-    private void executeActions(DialogueNode node) {
+    private String executeActions(DialogueNode node) {
         for (Action action : node.getActions()) {
-            id.naturalsmp.naturalinteraction.utils.ActionExecutor.execute(player, action);
+            String jumpNodeId = id.naturalsmp.naturalinteraction.utils.ActionExecutor.execute(player, action, plugin);
+            if (jumpNodeId != null) {
+                return jumpNodeId;
+            }
         }
+        return null;
     }
 
     private void faceNPC() {

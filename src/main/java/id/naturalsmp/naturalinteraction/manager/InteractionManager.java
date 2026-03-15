@@ -21,6 +21,7 @@ public class InteractionManager {
     // Cooldown and One-time reward tracking
     private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
     private final CompletionTracker completionTracker;
+    private final TagTracker tagTracker;
 
     public InteractionManager(NaturalInteraction plugin) {
         this.plugin = plugin;
@@ -30,6 +31,7 @@ public class InteractionManager {
         }
         this.cooldownsFile = new File(plugin.getDataFolder(), "cooldowns.json");
         this.completionTracker = new CompletionTracker(plugin);
+        this.tagTracker = new TagTracker(plugin);
         loadInteractions();
         loadCooldowns();
     }
@@ -111,6 +113,10 @@ public class InteractionManager {
 
     public CompletionTracker getCompletionTracker() {
         return completionTracker;
+    }
+
+    public TagTracker getTagTracker() {
+        return tagTracker;
     }
 
     /* Session Management */
