@@ -88,28 +88,43 @@ public class ActionExecutor {
                 case ITEM:
                     String[] itemParts = value.split(",");
                     if (itemParts.length >= 1) {
-                        org.bukkit.Material mat = org.bukkit.Material.matchMaterial(itemParts[0].toUpperCase());
                         int amount = itemParts.length > 1 ? Integer.parseInt(itemParts[1]) : 1;
-                        if (mat != null) {
-                            org.bukkit.inventory.ItemStack is = new org.bukkit.inventory.ItemStack(mat, amount);
-                            if (itemParts.length > 2) {
-                                org.bukkit.inventory.meta.ItemMeta meta = is.getItemMeta();
-                                if (meta != null) {
-                                    meta.displayName(
-                                            id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(itemParts[2]));
+                        org.bukkit.inventory.ItemStack itemToGive = null;
 
-                                    // Handle Map Initialization
-                                    if (mat == org.bukkit.Material.FILLED_MAP
-                                            && meta instanceof org.bukkit.inventory.meta.MapMeta) {
-                                        org.bukkit.inventory.meta.MapMeta mapMeta = (org.bukkit.inventory.meta.MapMeta) meta;
-                                        org.bukkit.map.MapView view = org.bukkit.Bukkit.createMap(player.getWorld());
-                                        mapMeta.setMapView(view);
+                        // Format check for ItemsAdder
+                        if (itemParts[0].contains(":")) {
+                            dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.getInstance(itemParts[0]);
+                            if (customStack != null) {
+                                itemToGive = customStack.getItemStack();
+                                itemToGive.setAmount(amount);
+                            }
+                        } else {
+                            // Vanilla fallback
+                            org.bukkit.Material mat = org.bukkit.Material.matchMaterial(itemParts[0].toUpperCase());
+                            if (mat != null) {
+                                itemToGive = new org.bukkit.inventory.ItemStack(mat, amount);
+                                if (itemParts.length > 2) {
+                                    org.bukkit.inventory.meta.ItemMeta meta = itemToGive.getItemMeta();
+                                    if (meta != null) {
+                                        meta.displayName(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(itemParts[2]));
+                                        if (mat == org.bukkit.Material.FILLED_MAP && meta instanceof org.bukkit.inventory.meta.MapMeta) {
+                                            org.bukkit.inventory.meta.MapMeta mapMeta = (org.bukkit.inventory.meta.MapMeta) meta;
+                                            org.bukkit.map.MapView view = org.bukkit.Bukkit.createMap(player.getWorld());
+                                            mapMeta.setMapView(view);
+                                        }
+                                        itemToGive.setItemMeta(meta);
                                     }
-
-                                    is.setItemMeta(meta);
                                 }
                             }
-                            player.getInventory().addItem(is);
+                        }
+
+                        if (itemToGive != null) {
+                            id.naturalsmp.naturalinteraction.manager.InteractionSession isession = plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
+                            if (isession != null && isession.getOriginalInventory() != null) {
+                                isession.addOriginalItem(itemToGive);
+                            } else {
+                                player.getInventory().addItem(itemToGive);
+                            }
                         }
                     }
                     break;
@@ -177,7 +192,7 @@ public class ActionExecutor {
                     if (takeParts.length >= 2) {
                         String itemStr = takeParts[0];
                         int amount = Integer.parseInt(takeParts[1]);
-                        takePlayerItem(player, itemStr, amount);
+                        takePlayerItem(player, itemStr, amount, plugin);
                     }
                     break;
                 case JUMP_IF_ITEM:
@@ -186,7 +201,7 @@ public class ActionExecutor {
                     if (jiParts.length == 3) {
                         String itemStr = jiParts[0];
                         int amount = Integer.parseInt(jiParts[1]);
-                        if (hasPlayerItem(player, itemStr, amount)) {
+                        if (hasPlayerItem(player, itemStr, amount, plugin)) {
                             return jiParts[2];
                         }
                     }
@@ -197,7 +212,7 @@ public class ActionExecutor {
                     if (jinParts.length == 3) {
                         String itemStr = jinParts[0];
                         int amount = Integer.parseInt(jinParts[1]);
-                        if (!hasPlayerItem(player, itemStr, amount)) {
+                        if (!hasPlayerItem(player, itemStr, amount, plugin)) {
                             return jinParts[2];
                         }
                     }
@@ -209,19 +224,24 @@ public class ActionExecutor {
         return null;
     }
 
-    private static boolean hasPlayerItem(Player player, String itemString, int amount) {
+    private static boolean hasPlayerItem(Player player, String itemString, int amount, id.naturalsmp.naturalinteraction.NaturalInteraction plugin) {
+        id.naturalsmp.naturalinteraction.manager.InteractionSession session = 
+            plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
+            
+        if (session != null && session.getOriginalInventory() != null) {
+            return session.hasOriginalItem(itemString, amount);
+        }
+
         int count = 0;
         for (org.bukkit.inventory.ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
 
             if (itemString.contains(":")) {
-                // ItemsAdder item
                 dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
                 if (customStack != null && customStack.getNamespacedID().equalsIgnoreCase(itemString)) {
                     count += item.getAmount();
                 }
             } else {
-                // Vanilla item
                 if (item.getType().name().equalsIgnoreCase(itemString)) {
                     count += item.getAmount();
                 }
@@ -230,7 +250,15 @@ public class ActionExecutor {
         return count >= amount;
     }
 
-    private static void takePlayerItem(Player player, String itemString, int amount) {
+    private static void takePlayerItem(Player player, String itemString, int amount, id.naturalsmp.naturalinteraction.NaturalInteraction plugin) {
+        id.naturalsmp.naturalinteraction.manager.InteractionSession session = 
+            plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
+            
+        if (session != null && session.getOriginalInventory() != null) {
+            session.takeOriginalItem(itemString, amount);
+            return;
+        }
+
         int remaining = amount;
         org.bukkit.inventory.ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {

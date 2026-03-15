@@ -611,6 +611,92 @@ public class InteractionSession {
         return originalInventory;
     }
 
+    public boolean hasOriginalItem(String itemString, int amount) {
+        if (originalInventory == null) return false;
+        int count = 0;
+        for (org.bukkit.inventory.ItemStack item : originalInventory) {
+            if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
+            if (itemString.contains(":")) {
+                dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
+                if (customStack != null && customStack.getNamespacedID().equalsIgnoreCase(itemString)) {
+                    count += item.getAmount();
+                }
+            } else {
+                if (item.getType().name().equalsIgnoreCase(itemString)) {
+                    count += item.getAmount();
+                }
+            }
+        }
+        return count >= amount;
+    }
+
+    public void takeOriginalItem(String itemString, int amount) {
+        if (originalInventory == null) return;
+        int remaining = amount;
+        for (int i = 0; i < originalInventory.length; i++) {
+            org.bukkit.inventory.ItemStack item = originalInventory[i];
+            if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
+
+            boolean match = false;
+            if (itemString.contains(":")) {
+                dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
+                if (customStack != null && customStack.getNamespacedID().equalsIgnoreCase(itemString)) match = true;
+            } else {
+                if (item.getType().name().equalsIgnoreCase(itemString)) match = true;
+            }
+
+            if (match) {
+                if (item.getAmount() <= remaining) {
+                    remaining -= item.getAmount();
+                    originalInventory[i] = null;
+                } else {
+                    item.setAmount(item.getAmount() - remaining);
+                    remaining = 0;
+                }
+                if (remaining <= 0) break;
+            }
+        }
+    }
+
+    public void addOriginalItem(org.bukkit.inventory.ItemStack itemToAdd) {
+        if (originalInventory == null) {
+            player.getInventory().addItem(itemToAdd);
+            return;
+        }
+        
+        // ItemsAdder specific clone to avoid modifying registry templates
+        org.bukkit.inventory.ItemStack clone = itemToAdd.clone();
+        int maxStack = clone.getMaxStackSize();
+        
+        // 1. Try to stack with existing similar items
+        for (int i = 0; i < originalInventory.length; i++) {
+            org.bukkit.inventory.ItemStack item = originalInventory[i];
+            if (item != null && item.isSimilar(clone) && item.getAmount() < maxStack) {
+                int space = maxStack - item.getAmount();
+                if (clone.getAmount() <= space) {
+                    item.setAmount(item.getAmount() + clone.getAmount());
+                    return;
+                } else {
+                    item.setAmount(maxStack);
+                    clone.setAmount(clone.getAmount() - space);
+                }
+            }
+        }
+        
+        // 2. Find empty slot
+        for (int i = 0; i < originalInventory.length; i++) {
+            // Hotbar is 0-8, inventory is 9-35
+            // Avoid armor slots if this array contains them, but getContents() is just main inv
+            if (originalInventory[i] == null || originalInventory[i].getType() == org.bukkit.Material.AIR) {
+                originalInventory[i] = clone;
+                return;
+            }
+        }
+        
+        // 3. Inventory full, drop
+        player.getWorld().dropItemNaturally(player.getLocation(), clone);
+    }
+
     public void end() {
         if (bossBar != null)
             player.hideBossBar(bossBar);
