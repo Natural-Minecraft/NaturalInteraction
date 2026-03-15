@@ -45,7 +45,9 @@ public final class NaturalInteraction extends JavaPlugin {
         InteractionCommand cmd = new InteractionCommand(this);
         getCommand("interaction").setExecutor(cmd);
         getCommand("interaction").setTabCompleter(cmd);
-        getCommand("story").setExecutor(new id.naturalsmp.naturalinteraction.commands.StoryCommand(this));
+        if (getCommand("story") != null) {
+            getCommand("story").setExecutor(new id.naturalsmp.naturalinteraction.commands.StoryCommand(this));
+        }
         
         if (getCommand("sidequest") != null) {
             getCommand("sidequest").setExecutor(new id.naturalsmp.naturalinteraction.command.SidequestCommand(this));
