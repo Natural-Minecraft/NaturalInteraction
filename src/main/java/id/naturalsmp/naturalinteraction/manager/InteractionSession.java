@@ -202,8 +202,7 @@ public class InteractionSession {
                 int missingChars = stripColors(fullDialogueText).length() - stripColors(revealed).length();
                 String padding = " ".repeat(Math.max(0, missingChars));
 
-                Component actionBarText = id.naturalsmp.naturalinteraction.utils.ChatUtils
-                        .toComponent(prefix + revealed + padding);
+                Component actionBarText = getInstructionActionBar(unicode, prefix, revealed, padding);
 
                 player.sendActionBar(actionBarText);
                 updateMainHologram(revealed);
@@ -228,8 +227,7 @@ public class InteractionSession {
                     int missingChars = stripColors(fullDialogueText).length() - stripColors(revealed).length();
                     String padding = " ".repeat(Math.max(0, missingChars));
 
-                    Component actionBarText = id.naturalsmp.naturalinteraction.utils.ChatUtils
-                            .toComponent(prefix + revealed + padding);
+                    Component actionBarText = getInstructionActionBar(unicode, prefix, revealed, padding);
                     player.sendActionBar(actionBarText);
                     updateMainHologram(revealed);
                 }
@@ -525,8 +523,7 @@ public class InteractionSession {
             // Show full text immediately with padding
             String unicode = interaction.getDialogueUnicode();
             String prefix = unicode.isEmpty() ? "" : unicode + " ";
-            Component fullText = id.naturalsmp.naturalinteraction.utils.ChatUtils
-                    .toComponent(prefix + fullDialogueText);
+            Component fullText = getInstructionActionBar(unicode, prefix, fullDialogueText, "");
             player.sendActionBar(fullText);
             updateMainHologram(fullDialogueText);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
@@ -834,5 +831,20 @@ public class InteractionSession {
         }
         player.sendMessage(Component.text("✨ ", NamedTextColor.GOLD)
                 .append(Component.text("Hadiah node diterima!", NamedTextColor.GREEN)));
+    }
+
+    private Component getInstructionActionBar(String unicode, String prefix, String revealed, String padding) {
+        if (unicode == null || unicode.trim().isEmpty()) {
+            String instruction;
+            if (currentNode != null && !currentNode.getOptions().isEmpty()) {
+                int opts = Math.min(currentNode.getOptions().size(), 8);
+                instruction = "&#FF3333\u27A4 &cKlik Hotbar 1-" + opts + " &funtuk memilih   &8|   &#FF3333\u27A4 &cShift &funtuk skip";
+            } else {
+                instruction = "&#FF3333\u27A4 &cTekan Shift &funtuk skip interaksi";
+            }
+            return id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(instruction);
+        } else {
+            return id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(prefix + revealed + padding);
+        }
     }
 }
