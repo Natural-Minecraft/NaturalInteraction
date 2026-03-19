@@ -48,8 +48,8 @@ public class PrologueJoinListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Skip admins
-        if (player.hasPermission("naturalsmp.admin")) return;
+        // Skip admins or players with bypass permission
+        if (player.hasPermission("naturalsmp.admin") || player.hasPermission("naturalstory.bypass.prologue")) return;
 
         CompletionTracker tracker = plugin.getInteractionManager().getCompletionTracker();
 

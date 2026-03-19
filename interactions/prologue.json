@@ -121,14 +121,86 @@
             "options": [
                 {
                     "text": "Kekayaan",
-                    "targetNodeId": "hadiah_kekayaan"
+                    "targetNodeId": "konfirmasi_kekayaan"
                 },
                 {
                     "text": "Daya Tahan",
-                    "targetNodeId": "hadiah_dayatahan"
+                    "targetNodeId": "konfirmasi_dayatahan"
                 },
                 {
                     "text": "Kekuatan",
+                    "targetNodeId": "konfirmasi_kekuatan"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "pilihan_hadiah_ulang": {
+            "id": "pilihan_hadiah_ulang",
+            "text": "&#FFFFAA&lDewi &eHmmmh, labil banget sih. Ya udah cepetan pilih!",
+            "options": [
+                {
+                    "text": "Kekayaan",
+                    "targetNodeId": "konfirmasi_kekayaan"
+                },
+                {
+                    "text": "Daya Tahan",
+                    "targetNodeId": "konfirmasi_dayatahan"
+                },
+                {
+                    "text": "Kekuatan",
+                    "targetNodeId": "konfirmasi_kekuatan"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "konfirmasi_kekayaan": {
+            "id": "konfirmasi_kekayaan",
+            "text": "&#FFFFAA&lDewi &ePilih Kekayaan? Kamu yakin? Nanti nyesel lho pas kena serang monster.",
+            "options": [
+                {
+                    "text": "Eh ga jadi, bentar!",
+                    "targetNodeId": "pilihan_hadiah_ulang"
+                },
+                {
+                    "text": "Iya dong, yakin!",
+                    "targetNodeId": "hadiah_kekayaan"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "konfirmasi_dayatahan": {
+            "id": "konfirmasi_dayatahan",
+            "text": "&#FFFFAA&lDewi &ePilih Daya Tahan? Biar tebel gitu badannya? Kamu yakin nih?",
+            "options": [
+                {
+                    "text": "Eh ga jadi, bentar!",
+                    "targetNodeId": "pilihan_hadiah_ulang"
+                },
+                {
+                    "text": "Iya dong, yakin!",
+                    "targetNodeId": "hadiah_dayatahan"
+                }
+            ],
+            "actions": [],
+            "durationSeconds": 10,
+            "giveReward": false
+        },
+        "konfirmasi_kekuatan": {
+            "id": "konfirmasi_kekuatan",
+            "text": "&#FFFFAA&lDewi &ePilih Kekuatan? Wah mau jadi jagoan ya? Yakin pilih ini?",
+            "options": [
+                {
+                    "text": "Eh ga jadi, bentar!",
+                    "targetNodeId": "pilihan_hadiah_ulang"
+                },
+                {
+                    "text": "Iya dong, yakin!",
                     "targetNodeId": "hadiah_kekuatan"
                 }
             ],
