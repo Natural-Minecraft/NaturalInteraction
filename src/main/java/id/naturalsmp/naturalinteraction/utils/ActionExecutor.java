@@ -65,18 +65,18 @@ public class ActionExecutor {
                     break;
                 case TITLE:
                     String[] titleParts = value.split(";");
-                    String titleText = titleParts[0];
-                    String subtitleText = titleParts.length > 1 ? titleParts[1] : "";
+                    String titleText = titleParts[0].replace("%player%", player.getName());
+                    String subtitleText = titleParts.length > 1 ? titleParts[1].replace("%player%", player.getName()) : "";
 
                     Title title = Title.title(
-                            Component.text(titleText),
-                            Component.text(subtitleText),
+                            ChatUtils.toComponent(titleText),
+                            ChatUtils.toComponent(subtitleText),
                             Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3000),
                                     Duration.ofMillis(1000)));
                     player.showTitle(title);
                     break;
                 case MESSAGE:
-                    player.sendMessage(Component.text(value.replace("%player%", player.getName())));
+                    player.sendMessage(ChatUtils.toComponent(value.replace("%player%", player.getName())));
                     break;
                 case ZOOM:
                     if ("true".equalsIgnoreCase(value)) {
