@@ -241,6 +241,7 @@
         "give %player_name% wooden_axe 1",
         "give %player_name% wooden_shovel 1",
         "give %player_name% golden_shovel 1",
-        "give %player_name% cooked_beef 16"
+        "give %player_name% cooked_beef 16",
+        "sudo %player% /sf guide"
     ]
 }
