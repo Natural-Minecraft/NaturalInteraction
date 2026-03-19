@@ -17,6 +17,7 @@ public final class NaturalInteraction extends JavaPlugin {
     private InteractionManager interactionManager;
     private EditorMode editorMode;
     private id.naturalsmp.naturalinteraction.listener.PrologueJoinListener prologueJoinListener;
+    private id.naturalsmp.naturalinteraction.visual.ElementalEffectManager elementalEffectManager;
 
     @Override
     public void onEnable() {
@@ -52,6 +53,9 @@ public final class NaturalInteraction extends JavaPlugin {
         if (getCommand("sidequest") != null) {
             getCommand("sidequest").setExecutor(new id.naturalsmp.naturalinteraction.command.SidequestCommand(this));
         }
+
+        // Elemental NPC Visual Effects
+        this.elementalEffectManager = new id.naturalsmp.naturalinteraction.visual.ElementalEffectManager(this);
 
         getLogger().info(
                 ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>has been enabled!"));
@@ -91,6 +95,9 @@ public final class NaturalInteraction extends JavaPlugin {
         if (interactionManager != null) {
             interactionManager.loadInteractions();
         }
+        if (elementalEffectManager != null) {
+            elementalEffectManager.reload();
+        }
     }
 
     @Override
@@ -100,6 +107,9 @@ public final class NaturalInteraction extends JavaPlugin {
         }
         if (storyManager != null) {
             storyManager.saveProgress();
+        }
+        if (elementalEffectManager != null) {
+            elementalEffectManager.stop();
         }
     }
 
@@ -125,5 +135,9 @@ public final class NaturalInteraction extends JavaPlugin {
 
     public id.naturalsmp.naturalinteraction.listener.PrologueJoinListener getPrologueJoinListener() {
         return prologueJoinListener;
+    }
+
+    public id.naturalsmp.naturalinteraction.visual.ElementalEffectManager getElementalEffectManager() {
+        return elementalEffectManager;
     }
 }

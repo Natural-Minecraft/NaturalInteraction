@@ -1,0 +1,26 @@
+# Elemental NPC Visual Effects
+# Set npc-id to the Citizens NPC ID after creating the NPC in-game.
+# Use /npc select then check the NPC ID.
+
+effects:
+  elemental_angin:
+    npc-id: -1
+    type: WIND
+    float-height: 3.0    # How high above ground the NPC floats
+    bob-amplitude: 1.0   # Up/down bobbing distance (blocks)
+    bob-period: 3.0      # Bobbing cycle in seconds
+
+  elemental_tanah:
+    npc-id: -1
+    type: EARTH
+    ground-radius: 2.5   # Radius of ground crack pattern
+
+  elemental_air:
+    npc-id: -1
+    type: WATER
+    ground-radius: 2.5   # Radius of water splash ring
+
+  elemental_api:
+    npc-id: -1
+    type: FIRE
+    spiral-height: 2.5   # Height of the flame spiral

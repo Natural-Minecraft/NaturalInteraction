@@ -223,10 +223,6 @@
                 },
                 {
                     "type": "COMMAND",
-                    "value": "npc hologram add &b&l!"
-                },
-                {
-                    "type": "COMMAND",
                     "value": "npc deselect"
                 }
             ],
