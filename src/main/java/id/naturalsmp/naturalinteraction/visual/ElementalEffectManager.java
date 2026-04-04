@@ -102,7 +102,25 @@ public class ElementalEffectManager {
                     if (effect instanceof WindEffect windEffect) {
                         // Store base location on first encounter
                         if (!baseLocations.containsKey(npcId)) {
-                            baseLocations.put(npcId, npcLoc.clone());
+                            org.bukkit.configuration.file.FileConfiguration cfg = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "elemental_effects.yml"));
+                            org.bukkit.configuration.ConfigurationSection effects = cfg.getConfigurationSection("effects");
+                            Location configBaseLoc = null;
+                            if (effects != null) {
+                                for (String key : effects.getKeys(false)) {
+                                    if (effects.getInt(key + ".npc-id") == npcId) {
+                                        if (effects.contains(key + ".base-location")) {
+                                            configBaseLoc = effects.getLocation(key + ".base-location");
+                                        } else {
+                                            configBaseLoc = npcLoc.clone();
+                                            effects.set(key + ".base-location", configBaseLoc);
+                                            try { cfg.save(new File(plugin.getDataFolder(), "elemental_effects.yml")); } catch (Exception ignored) {}
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            if (configBaseLoc == null) configBaseLoc = npcLoc.clone();
+                            baseLocations.put(npcId, configBaseLoc);
                         }
 
                         Location baseLoc = baseLocations.get(npcId);
