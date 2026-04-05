@@ -22,9 +22,6 @@ public class ActionExecutor {
         String value = action.getValue();
         if (value == null)
             value = "";
-            
-        // Translate if starts with lang:
-        value = id.naturalsmp.naturalinteraction.hook.LanguageHook.translate(player, value);
 
         try {
             switch (action.getType()) {

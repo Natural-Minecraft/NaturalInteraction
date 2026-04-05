@@ -40,9 +40,6 @@ public final class NaturalInteraction extends JavaPlugin {
             new id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion(this).register();
         }
 
-        // Language Hook for NaturalCore
-        id.naturalsmp.naturalinteraction.hook.LanguageHook.init();
-
         registerEvents();
 
         // Commands
