@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -13,6 +14,10 @@ public class ChatUtils {
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer SECTION_SERIALIZER = LegacyComponentSerializer.legacySection();
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
+
+    public static String colorize(Player player, String message) {
+        return colorize(id.naturalsmp.naturalinteraction.hook.LanguageHook.translate(player, message));
+    }
 
     public static String colorize(String message) {
         if (message == null || message.isEmpty())
@@ -39,6 +44,10 @@ public class ChatUtils {
         result = matcher.appendTail(buffer).toString();
 
         return ChatColor.translateAlternateColorCodes('&', result);
+    }
+
+    public static Component toComponent(Player player, String message) {
+        return toComponent(id.naturalsmp.naturalinteraction.hook.LanguageHook.translate(player, message));
     }
 
     public static Component toComponent(String message) {
