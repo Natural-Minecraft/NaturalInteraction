@@ -20,6 +20,9 @@ public class WindEffect implements ElementalEffect {
         this.bobPeriodTicks = bobPeriodSeconds * 20.0; // convert to ticks
     }
 
+    // Hard limits: NPC can never float more than MAX_FLOAT above base Y
+    private static final double MAX_FLOAT_LIMIT = 5.0;
+
     @Override
     public void render(Location npcLocation, long tick) {
         World world = npcLocation.getWorld();
@@ -61,8 +64,23 @@ public class WindEffect implements ElementalEffect {
 
     @Override
     public Location getAdjustedNPCLocation(Location base, long tick) {
-        // Sinusoidal bob: base + floatHeight + sin(tick) * bobAmplitude
-        double bobOffset = Math.sin(2 * Math.PI * tick / bobPeriodTicks) * bobAmplitude;
-        return base.clone().add(0, floatHeight + bobOffset, 0);
+        // Guard: avoid division by zero / NaN if period misconfigured
+        double safeOffset = 0.0;
+        if (bobPeriodTicks > 0) {
+            double raw = Math.sin(2 * Math.PI * tick / bobPeriodTicks) * bobAmplitude;
+            // Guard NaN / Infinity
+            if (Double.isFinite(raw)) {
+                safeOffset = raw;
+            }
+        }
+
+        // Clamp: total Y offset must stay within [floatHeight - bobAmplitude, floatHeight + bobAmplitude]
+        // AND never exceed MAX_FLOAT_LIMIT above base
+        double totalOffset = floatHeight + safeOffset;
+        double minOffset = Math.max(0.0, floatHeight - bobAmplitude);
+        double maxOffset = Math.min(MAX_FLOAT_LIMIT, floatHeight + bobAmplitude);
+        totalOffset = Math.max(minOffset, Math.min(maxOffset, totalOffset));
+
+        return base.clone().add(0, totalOffset, 0);
     }
 }

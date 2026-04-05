@@ -83,7 +83,8 @@ public class ElementalEffectManager {
         renderTask = new BukkitRunnable() {
             @Override
             public void run() {
-                tickCounter++;
+                // Wrap tick to prevent long overflow & floating-point precision loss in sin()
+                tickCounter = (tickCounter + 1) % 1_000_000L;
 
                 for (Map.Entry<Integer, ElementalEffect> entry : effectMap.entrySet()) {
                     int npcId = entry.getKey();
