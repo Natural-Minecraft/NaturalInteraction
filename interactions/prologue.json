@@ -19,7 +19,7 @@
             "actions": [
                 {
                     "type": "SCREENEFFECT",
-                    "value": "fullscreen BLACK 10 20 15 freeze"
+                    "value": "fullscreen BLACK 10 200 15 freeze %player% &eUntuk Menjawab\\n&fPilih Hotbar 1, 2 atau 3."
                 },
                 {
                     "type": "INVISIBLE",

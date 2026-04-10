@@ -53,7 +53,7 @@
       "options": [],
       "actions": [
         { "type": "ADD_TAG", "value": "guard_quest_started" },
-        { "type": "COMMAND", "value": "minecraft:give %player% written_book{pages:['{\"text\":\"Resep Hamburger:\\n\\n1. Tanam Tomato \u0026 Lettuce dari toko benih di /warp pasar.\\n2. Beli Plastic.\\n3. Sliced Bread: 1 Knife (Iron Nugget + Stick) + 1 Bread.\\n4. Ketchup: 6 Plastic Plate (dari 3 Plastic) + 3 Tomato.\\n\\nCrafter:\\n- Atas\u0026Bawah Tengah: Sliced Bread\\n- Kiri: Tomato, Kanan: Lettuce\\n- Tengah: Steak\\n- Pojok Bawah Kanan: Ketchup\"}'],title:\"Resep Hamburger\",author:\"Penjaga Lapar\"} 1" },
+        { "type": "COMMAND", "value": "minecraft:give %player% written_book[written_book_content={pages:['{\"text\":\"Resep Hamburger:\\\\n\\\\n1. Tanam Tomato \u0026 Lettuce dari toko benih di /warp pasar.\\\\n2. Beli Plastic.\\\\n3. Sliced Bread: 1 Knife (Iron Nugget + Stick) + 1 Bread.\\\\n4. Ketchup: 6 Plastic Plate (dari 3 Plastic) + 3 Tomato.\\\\n\\\\nCrafter:\\\\n- Atas\u0026Bawah Tengah: Sliced Bread\\\\n- Kiri: Tomato, Kanan: Lettuce\\\\n- Tengah: Steak\\\\n- Pojok Bawah Kanan: Ketchup\"}'],title:\"Resep Hamburger\",author:\"Penjaga Lapar\"}] 1" },
         { "type": "MESSAGE", "value": "&a[Sidequest] Camilan Penjaga dimulai! Buatlah 1 Hamburger." }
       ],
       "durationSeconds": 10,
