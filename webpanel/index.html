@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NaturalInteraction — Web Panel</title>
+  <meta name="description" content="Visual editor for NaturalInteraction interactions, quests, NPCs, and cinematics" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">✦</span>
+          <h1>NaturalInteraction</h1>
+        </div>
+        <span class="version-badge" id="version-badge">v2.0.0</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-page="interactions" id="nav-interactions">
+          <span class="nav-icon">💬</span>
+          <span>Interactions</span>
+        </button>
+        <button class="nav-item" data-page="chapters" id="nav-chapters">
+          <span class="nav-icon">📖</span>
+          <span>Chapters</span>
+        </button>
+        <button class="nav-item" data-page="facts" id="nav-facts">
+          <span class="nav-icon">🧠</span>
+          <span>Facts</span>
+        </button>
+        <button class="nav-item" data-page="manifests" id="nav-manifests">
+          <span class="nav-icon">🎭</span>
+          <span>Manifests</span>
+        </button>
+        <button class="nav-item" data-page="npcs" id="nav-npcs">
+          <span class="nav-icon">🧑</span>
+          <span>NPCs</span>
+        </button>
+        <button class="nav-item" data-page="cinematics" id="nav-cinematics">
+          <span class="nav-icon">🎬</span>
+          <span>Cinematics</span>
+        </button>
+        <button class="nav-item" data-page="settings" id="nav-settings">
+          <span class="nav-icon">⚙️</span>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="connection-status" id="connection-status">
+          <span class="status-dot disconnected"></span>
+          <span>Disconnected</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h2 class="page-title" id="page-title">Interactions</h2>
+          <span class="breadcrumb" id="breadcrumb">Dashboard / Interactions</span>
+        </div>
+        <div class="topbar-right">
+          <div class="search-bar">
+            <input type="text" placeholder="Search interactions..." id="search-input" />
+          </div>
+          <button class="btn btn-primary" id="btn-new">
+            <span>+ New</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Pages -->
+      <section class="page active" id="page-interactions">
+        <div class="page-header">
+          <h3>All Interactions</h3>
+          <p class="text-muted">Manage dialogue trees, branching stories, and NPC interactions</p>
+        </div>
+        <div class="card-grid" id="interactions-grid">
+          <div class="card card-empty" id="card-empty">
+            <div class="card-empty-icon">📝</div>
+            <p>No interactions loaded</p>
+            <p class="text-muted">Connect to the server or create a new interaction</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-chapters">
+        <div class="page-header">
+          <h3>Chapters</h3>
+          <p class="text-muted">Organize interactions into story chapters</p>
+        </div>
+        <div class="chapter-tree" id="chapter-tree">
+          <div class="card card-empty">
+            <p class="text-muted">Connect to server to view chapter tree</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-facts">
+        <div class="page-header">
+          <h3>Facts Manager</h3>
+          <p class="text-muted">Browse and edit player facts, tags, and completion state</p>
+        </div>
+        <div class="facts-panel" id="facts-panel">
+          <div class="card card-empty">
+            <p class="text-muted">Select a player to view their facts</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-manifests">
+        <div class="page-header">
+          <h3>Manifests</h3>
+          <p class="text-muted">Declarative audience filters and displays</p>
+        </div>
+        <div class="card card-empty">
+          <p class="text-muted">Connect to server to manage manifests</p>
+        </div>
+      </section>
+
+      <section class="page" id="page-npcs">
+        <div class="page-header">
+          <h3>NPCs</h3>
+          <p class="text-muted">Configure NPC behavior, appearance, and interactions</p>
+        </div>
+        <div class="card card-empty">
+          <p class="text-muted">Connect to server to manage NPCs</p>
+        </div>
+      </section>
+
+      <section class="page" id="page-cinematics">
+        <div class="page-header">
+          <h3>Cinematics</h3>
+          <p class="text-muted">Build camera paths and cinematic sequences</p>
+        </div>
+        <div class="card card-empty">
+          <p class="text-muted">Cinematic editor coming in Phase 6</p>
+        </div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="page-header">
+          <h3>Settings</h3>
+          <p class="text-muted">Plugin configuration and WebSocket connection</p>
+        </div>
+        <div class="settings-form">
+          <div class="form-group">
+            <label>Server Address</label>
+            <input type="text" id="server-address" value="ws://localhost:8585/ws" />
+          </div>
+          <div class="form-group">
+            <label>Auth Token</label>
+            <input type="password" id="auth-token" placeholder="Enter token from /ni connect" />
+          </div>
+          <button class="btn btn-primary" id="btn-connect">Connect</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

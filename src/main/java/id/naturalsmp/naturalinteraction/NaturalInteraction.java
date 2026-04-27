@@ -19,6 +19,7 @@ import id.naturalsmp.naturalinteraction.story.StoryManager;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
 import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
+import id.naturalsmp.naturalinteraction.webpanel.WebPanelServer;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.event.EventHandler;
@@ -38,6 +39,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     private ElementalEffectManager elementalEffectManager;
     private FactsManager factsManager;
     private ManifestManager manifestManager;
+    private WebPanelServer webPanelServer;
 
     @Override
     public void onEnable() {
@@ -79,6 +81,13 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         // Manifest system (Phase 4 — declarative audience/display)
         this.manifestManager = new ManifestManager(this);
 
+        // Web Panel (Phase 5) — conditional start
+        if (getConfig().getBoolean("webpanel.enabled", false)) {
+            int port = getConfig().getInt("webpanel.port", 8585);
+            this.webPanelServer = new WebPanelServer(this);
+            this.webPanelServer.start(port);
+        }
+
         // Register this class as listener for PlayerQuitEvent (manifest cleanup)
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -98,6 +107,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         if (storyManager != null)        storyManager.saveProgress();
         if (elementalEffectManager != null) elementalEffectManager.stop();
         if (manifestManager != null)     manifestManager.cleanup();
+        if (webPanelServer != null)      webPanelServer.stop();
     }
 
     // ─── Registration ─────────────────────────────────────────────────────────
