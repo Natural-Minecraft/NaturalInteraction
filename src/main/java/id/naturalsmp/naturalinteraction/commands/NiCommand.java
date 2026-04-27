@@ -1,6 +1,7 @@
 package id.naturalsmp.naturalinteraction.commands;
 
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
+import id.naturalsmp.naturalinteraction.commands.subs.*;
 import id.naturalsmp.naturalinteraction.facts.FactsManager;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import net.kyori.adventure.text.Component;
@@ -17,70 +18,98 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Root command for NaturalInteraction v2.
- * Usage: /ni <subcommand> [args...]
+ * Unified root command for NaturalInteraction v2.
+ * Merges legacy InteractionCommand subcommands (create, edit, bind, etc.)
+ * with new v2 subcommands (facts, trigger, cinematic, etc.)
  *
- * Subcommands:
- *  reload          Reload the plugin
- *  clearChat       Clear player's chat
- *  connect         Get the Web Panel link
- *  facts [player]  View a player's facts
- *  facts set <key> <value> [player]
- *  facts reset [player]
- *  trigger <entry> [player]
- *  fire <entry> [player]
- *  cinematic <start|stop> <page> [player]
- *  quest track <quest> [player]
- *  untrack [player]
- *  manifest inspect [player]
- *  assets clean
+ * Usage: /ni <subcommand> [args...]
+ * Aliases: /interaction, /inter
  */
 public class NiCommand implements CommandExecutor, TabCompleter {
 
     private static final String PERM_ADMIN = "naturalsmp.admin";
-    private static final String PERM_USE   = "naturalsmp.ni";
 
     private final NaturalInteraction plugin;
 
+    // Legacy SubCommand system (create, edit, bind, delete, etc.)
+    private final Map<String, SubCommand> legacySubs = new HashMap<>();
+
+    // New v2 subcommand names
+    private static final Set<String> V2_SUBS = Set.of(
+            "reload", "clearchat", "connect", "facts", "trigger",
+            "fire", "cinematic", "quest", "untrack", "manifest", "assets");
+
     public NiCommand(NaturalInteraction plugin) {
         this.plugin = plugin;
+
+        // Register legacy SubCommands
+        registerLegacy(new StartCommand(plugin));
+        registerLegacy(new EditorCommand(plugin));
+        registerLegacy(new WandCommand(plugin));
+        registerLegacy(new CreateCommand(plugin));
+        registerLegacy(new PlayCommand(plugin));
+        registerLegacy(new BindCommand(plugin));
+        registerLegacy(new EditCommand(plugin));
+        registerLegacy(new DeleteCommand(plugin));
+        registerLegacy(new SpawnFishCommand(plugin));
+        registerLegacy(new QuickStartCommand(plugin));
+        registerLegacy(new SpawnSmartCommand(plugin));
+        // Note: ReloadCommand is replaced by v2 reload below
+    }
+
+    private void registerLegacy(SubCommand sub) {
+        legacySubs.put(sub.getName().toLowerCase(), sub);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0) {
-            sendHelp(sender);
+        if (args.length == 0) { sendHelp(sender); return true; }
+        String sub = args[0].toLowerCase();
+
+        // V2 subcommands take priority
+        if (V2_SUBS.contains(sub)) {
+            return handleV2(sender, sub, args);
+        }
+
+        // Legacy SubCommand fallback (create, edit, bind, etc.)
+        SubCommand legacy = legacySubs.get(sub);
+        if (legacy != null) {
+            if (legacy.getPermission() != null && !sender.hasPermission(legacy.getPermission())) {
+                sender.sendMessage(ChatUtils.toComponent("&cKamu tidak memiliki permission."));
+                return true;
+            }
+            legacy.execute(sender, args);
             return true;
         }
 
-        String sub = args[0].toLowerCase();
+        sendHelp(sender);
+        return true;
+    }
 
+    // ─── V2 Subcommands ───────────────────────────────────────────────────────
+
+    private boolean handleV2(CommandSender sender, String sub, String[] args) {
         switch (sub) {
             case "reload"    -> handleReload(sender);
             case "clearchat" -> handleClearChat(sender, args);
             case "connect"   -> handleConnect(sender);
             case "facts"     -> handleFacts(sender, args);
             case "trigger"   -> handleTrigger(sender, args);
-            case "fire"      -> handleFire(sender, args);
+            case "fire"      -> handleTrigger(sender, args); // alias
             case "cinematic" -> handleCinematic(sender, args);
             case "quest"     -> handleQuest(sender, args);
             case "untrack"   -> handleUntrack(sender, args);
             case "manifest"  -> handleManifest(sender, args);
             case "assets"    -> handleAssets(sender, args);
-            default          -> sendHelp(sender);
         }
         return true;
     }
-
-    // ─── /ni reload ───────────────────────────────────────────────────────────
 
     private void handleReload(CommandSender sender) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
         plugin.reloadPlugin();
         sender.sendMessage(ChatUtils.toComponent("&a✔ NaturalInteraction reloaded."));
     }
-
-    // ─── /ni clearChat [player] ───────────────────────────────────────────────
 
     private void handleClearChat(CommandSender sender, String[] args) {
         Player target = resolvePlayer(sender, args, 1);
@@ -91,142 +120,99 @@ public class NiCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatUtils.toComponent("&7Chat &e" + target.getName() + " &7dibersihkan."));
     }
 
-    // ─── /ni connect ──────────────────────────────────────────────────────────
-
     private void handleConnect(CommandSender sender) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        // TODO: generate one-time token from WebPanelServer when implemented
-        String url = "http://localhost:" + plugin.getConfig().getInt("webpanel.port", 8585)
-                + "?token=coming-soon";
+        String url = "http://localhost:" + plugin.getConfig().getInt("webpanel.port", 8585);
         sender.sendMessage(ChatUtils.toComponent("&6✦ &eNaturalInteraction Web Panel"));
         sender.sendMessage(Component.text("  ").append(
                 Component.text(url, NamedTextColor.AQUA)
                         .clickEvent(ClickEvent.openUrl(url))));
-        sender.sendMessage(ChatUtils.toComponent("  &7(Klik untuk buka di browser)"));
     }
-
-    // ─── /ni facts [player] | facts set <key> <val> [player] | facts reset [player] ──
 
     private void handleFacts(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
+        FactsManager fm = plugin.getFactsManager();
 
         // facts reset [player]
         if (args.length >= 2 && args[1].equalsIgnoreCase("reset")) {
-            Player target = resolvePlayer(sender, args, 2);
-            if (target == null) return;
-            plugin.getFactsManager().resetAll(target.getUniqueId());
-            sender.sendMessage(ChatUtils.toComponent("&a✔ All facts reset for &e" + target.getName()));
+            Player t = resolvePlayer(sender, args, 2);
+            if (t == null) return;
+            fm.resetAll(t.getUniqueId());
+            sender.sendMessage(ChatUtils.toComponent("&a✔ Facts reset for &e" + t.getName()));
             return;
         }
-
         // facts set <key> <value> [player]
         if (args.length >= 4 && args[1].equalsIgnoreCase("set")) {
-            Player target = resolvePlayer(sender, args, 4);
-            if (target == null) return;
-            plugin.getFactsManager().setString(target.getUniqueId(), args[2], args[3]);
-            sender.sendMessage(ChatUtils.toComponent("&a✔ Fact &e" + args[2] + " &a= &f" + args[3]
-                    + " &adata ke &e" + target.getName()));
+            Player t = resolvePlayer(sender, args, 4);
+            if (t == null) return;
+            fm.setString(t.getUniqueId(), args[2], args[3]);
+            sender.sendMessage(ChatUtils.toComponent("&a✔ &e" + args[2] + " &a= &f" + args[3]
+                    + " &afor &e" + t.getName()));
             return;
         }
-
-        // facts [player] → view all facts
-        Player target = resolvePlayer(sender, args, 1);
-        if (target == null) return;
-        Map<String, String> facts = plugin.getFactsManager().getAll(target.getUniqueId());
-        sender.sendMessage(ChatUtils.toComponent("&6--- Facts: &e" + target.getName() + " &6(" + facts.size() + ") ---"));
+        // facts [player] → view
+        Player t = resolvePlayer(sender, args, 1);
+        if (t == null) return;
+        Map<String, String> facts = fm.getAll(t.getUniqueId());
+        sender.sendMessage(ChatUtils.toComponent("&6--- Facts: &e" + t.getName()
+                + " &6(" + facts.size() + ") ---"));
         if (facts.isEmpty()) {
             sender.sendMessage(ChatUtils.toComponent("  &7(tidak ada facts)"));
         } else {
-            facts.entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey())
+            facts.entrySet().stream().sorted(Map.Entry.comparingByKey())
                     .forEach(e -> sender.sendMessage(
                             ChatUtils.toComponent("  &7" + e.getKey() + " &8= &f" + e.getValue())));
         }
     }
 
-    // ─── /ni trigger <entry> [player] ─────────────────────────────────────────
-
     private void handleTrigger(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        if (args.length < 2) { sender.sendMessage(ChatUtils.toComponent("&cUsage: /ni trigger <entry> [player]")); return; }
-        Player target = resolvePlayer(sender, args, 2);
-        if (target == null) return;
-        String interactionId = args[1];
-        if (!plugin.getInteractionManager().hasInteraction(interactionId)) {
-            sender.sendMessage(ChatUtils.toComponent("&cInteraction tidak ditemukan: &f" + interactionId));
+        if (args.length < 2) { sender.sendMessage(ChatUtils.toComponent("&c/ni trigger <entry> [player]")); return; }
+        Player t = resolvePlayer(sender, args, 2);
+        if (t == null) return;
+        if (!plugin.getInteractionManager().hasInteraction(args[1])) {
+            sender.sendMessage(ChatUtils.toComponent("&cInteraction tidak ditemukan: &f" + args[1]));
             return;
         }
-        plugin.getInteractionManager().startInteraction(target, interactionId);
-        sender.sendMessage(ChatUtils.toComponent("&a✔ Triggered &e" + interactionId + " &afor &e" + target.getName()));
+        plugin.getInteractionManager().startInteraction(t, args[1]);
+        sender.sendMessage(ChatUtils.toComponent("&a✔ Triggered &e" + args[1] + " &afor &e" + t.getName()));
     }
-
-    // ─── /ni fire <entry> [player] ────────────────────────────────────────────
-
-    private void handleFire(CommandSender sender, String[] args) {
-        // Alias for trigger — fires a trigger event entry
-        handleTrigger(sender, args);
-    }
-
-    // ─── /ni cinematic <start|stop> <page> [player] ───────────────────────────
 
     private void handleCinematic(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        if (args.length < 3) {
-            sender.sendMessage(ChatUtils.toComponent("&cUsage: /ni cinematic <start|stop> <page> [player]"));
-            return;
-        }
-        // TODO: implement when CinematicManager is built in Phase 6
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Cinematic system akan tersedia di Phase 6."));
+        sender.sendMessage(ChatUtils.toComponent("&eWIP: Cinematic system (Phase 6)"));
     }
-
-    // ─── /ni quest track <quest> [player] ─────────────────────────────────────
 
     private void handleQuest(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        if (args.length < 3 || !args[1].equalsIgnoreCase("track")) {
-            sender.sendMessage(ChatUtils.toComponent("&cUsage: /ni quest track <questEntry> [player]"));
-            return;
-        }
-        Player target = resolvePlayer(sender, args, 3);
-        if (target == null) return;
-        // TODO: wire into QuestManager when built
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Quest system dalam pengembangan."));
+        sender.sendMessage(ChatUtils.toComponent("&eWIP: Quest tracking system"));
     }
-
-    // ─── /ni untrack [player] ─────────────────────────────────────────────────
 
     private void handleUntrack(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        Player target = resolvePlayer(sender, args, 1);
-        if (target == null) return;
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Quest system dalam pengembangan."));
+        sender.sendMessage(ChatUtils.toComponent("&eWIP: Quest tracking system"));
     }
-
-    // ─── /ni manifest inspect [player] ────────────────────────────────────────
 
     private void handleManifest(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        // TODO: wire into ManifestManager in Phase 4
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Manifest system akan tersedia di Phase 4."));
+        sender.sendMessage(ChatUtils.toComponent("&eWIP: Manifest system (Phase 4)"));
     }
-
-    // ─── /ni assets clean ─────────────────────────────────────────────────────
 
     private void handleAssets(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        if (args.length < 2 || !args[1].equalsIgnoreCase("clean")) {
-            sender.sendMessage(ChatUtils.toComponent("&cUsage: /ni assets clean"));
-            return;
-        }
-        // TODO: implement asset cleanup when asset system is built
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Asset system dalam pengembangan."));
+        sender.sendMessage(ChatUtils.toComponent("&eWIP: Asset system"));
     }
 
     // ─── Help ─────────────────────────────────────────────────────────────────
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(ChatUtils.toComponent("<gradient:#4facfe:#00f2fe><b>NaturalInteraction v2</b></gradient> &8— /ni"));
-        List<String[]> cmds = List.of(
+        sender.sendMessage(ChatUtils.toComponent(
+                "<gradient:#4facfe:#00f2fe><b>NaturalInteraction v2</b></gradient> &8— /ni"));
+        sender.sendMessage(Component.empty());
+
+        // V2 commands
+        sender.sendMessage(ChatUtils.toComponent("&6&lV2 Commands:"));
+        for (String[] c : List.of(
                 new String[]{"reload", "Reload plugin"},
                 new String[]{"clearChat [player]", "Bersihkan chat"},
                 new String[]{"connect", "Buka Web Panel"},
@@ -236,52 +222,59 @@ public class NiCommand implements CommandExecutor, TabCompleter {
                 new String[]{"trigger <entry> [player]", "Trigger interaction"},
                 new String[]{"cinematic <start|stop> <page> [player]", "Main cinematic"},
                 new String[]{"quest track <quest> [player]", "Track quest"},
-                new String[]{"untrack [player]", "Stop tracking quest"},
-                new String[]{"manifest inspect [player]", "Inspect manifest"},
-                new String[]{"assets clean", "Bersihkan asset tidak terpakai"}
-        );
-        for (String[] cmd : cmds) {
-            sender.sendMessage(ChatUtils.toComponent("  &8/ni &7" + cmd[0] + " &8— &f" + cmd[1]));
+                new String[]{"untrack [player]", "Stop tracking"},
+                new String[]{"manifest inspect [player]", "Inspect manifest"}
+        )) {
+            sender.sendMessage(ChatUtils.toComponent("  &8/ni &7" + c[0] + " &8— &f" + c[1]));
         }
+
+        // Legacy editor commands
+        sender.sendMessage(Component.empty());
+        sender.sendMessage(ChatUtils.toComponent("&6&lEditor Commands:"));
+        legacySubs.values().stream()
+                .filter(s -> s.getPermission() == null || sender.hasPermission(s.getPermission()))
+                .sorted(Comparator.comparing(SubCommand::getName))
+                .forEach(s -> sender.sendMessage(
+                        ChatUtils.toComponent("  &8/ni &7" + s.getUsage() + " &8— &f" + s.getDescription())));
     }
 
     // ─── Tab Completion ───────────────────────────────────────────────────────
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!sender.hasPermission(PERM_ADMIN)) return List.of();
-
-        List<String> subs = List.of("reload", "clearChat", "connect", "facts",
-                "trigger", "fire", "cinematic", "quest", "untrack", "manifest", "assets");
-
         if (args.length == 1) {
-            return subs.stream().filter(s -> s.startsWith(args[0].toLowerCase())).collect(Collectors.toList());
+            List<String> all = new ArrayList<>(V2_SUBS);
+            legacySubs.keySet().forEach(all::add);
+            return all.stream()
+                    .filter(s -> s.startsWith(args[0].toLowerCase()))
+                    .sorted()
+                    .collect(Collectors.toList());
         }
 
+        // V2 tab completion
         switch (args[0].toLowerCase()) {
             case "facts" -> {
                 if (args.length == 2) return List.of("set", "reset");
-                if (args.length >= 3) return onlinePlayers(args[args.length - 1]);
+                return onlinePlayers(args[args.length - 1]);
             }
             case "trigger", "fire" -> {
                 if (args.length == 2) return new ArrayList<>(plugin.getInteractionManager().getInteractionIds());
-                if (args.length == 3) return onlinePlayers(args[2]);
+                return onlinePlayers(args[args.length - 1]);
             }
-            case "clearchat", "untrack" -> {
-                if (args.length == 2) return onlinePlayers(args[1]);
-            }
+            case "clearchat", "untrack" -> { return onlinePlayers(args[args.length - 1]); }
             case "cinematic" -> {
                 if (args.length == 2) return List.of("start", "stop");
                 if (args.length == 3) return new ArrayList<>(plugin.getInteractionManager().getInteractionIds());
-                if (args.length == 4) return onlinePlayers(args[3]);
+                return onlinePlayers(args[args.length - 1]);
             }
-            case "quest" -> {
-                if (args.length == 2) return List.of("track");
-            }
-            case "assets" -> {
-                if (args.length == 2) return List.of("clean");
-            }
+            case "quest" -> { if (args.length == 2) return List.of("track"); }
+            case "assets" -> { if (args.length == 2) return List.of("clean"); }
         }
+
+        // Legacy tab completion
+        SubCommand legacy = legacySubs.get(args[0].toLowerCase());
+        if (legacy != null) return legacy.onTabComplete(sender, args);
+
         return List.of();
     }
 
@@ -290,25 +283,21 @@ public class NiCommand implements CommandExecutor, TabCompleter {
     private Player resolvePlayer(CommandSender sender, String[] args, int argIndex) {
         if (args.length > argIndex) {
             Player p = Bukkit.getPlayer(args[argIndex]);
-            if (p == null) {
-                sender.sendMessage(ChatUtils.toComponent("&cPlayer tidak ditemukan: &f" + args[argIndex]));
-                return null;
-            }
+            if (p == null) { sender.sendMessage(ChatUtils.toComponent("&cPlayer tidak ditemukan: &f" + args[argIndex])); return null; }
             return p;
         }
         if (sender instanceof Player p) return p;
-        sender.sendMessage(ChatUtils.toComponent("&cHarus specify player dari console: /ni <cmd> <player>"));
+        sender.sendMessage(ChatUtils.toComponent("&cHarus specify player dari console."));
         return null;
     }
 
     private List<String> onlinePlayers(String prefix) {
-        return Bukkit.getOnlinePlayers().stream()
-                .map(Player::getName)
+        return Bukkit.getOnlinePlayers().stream().map(Player::getName)
                 .filter(n -> n.toLowerCase().startsWith(prefix.toLowerCase()))
                 .collect(Collectors.toList());
     }
 
     private void noPermission(CommandSender sender) {
-        sender.sendMessage(ChatUtils.toComponent("&cKamu tidak memiliki permission untuk command ini."));
+        sender.sendMessage(ChatUtils.toComponent("&cKamu tidak memiliki permission."));
     }
 }

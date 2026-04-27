@@ -33,7 +33,7 @@ public class TimerController {
      * {@code onTimeout} is called on the main thread when time expires.
      */
     public void start(DialogueNode node, Runnable onTimeout) {
-        stop(); // Cancel any existing timer first
+        stop(); // Cancel any existing timer AND hide old bossbar
 
         String displayName = buildDisplayName();
         bossBar = BossBar.bossBar(
@@ -52,6 +52,7 @@ public class TimerController {
             public void run() {
                 if (!player.isOnline()) {
                     cancel();
+                    hide();
                     plugin.getInteractionManager().endInteraction(player.getUniqueId());
                     return;
                 }
@@ -67,14 +68,22 @@ public class TimerController {
         timerTask.runTaskTimer(plugin, 0L, 2L);
     }
 
-    /** Stop and cancel the current timer task. */
+    /**
+     * Stop the timer AND hide the BossBar.
+     * Always call this instead of hide() directly — it ensures both are cleaned.
+     */
     public void stop() {
         if (timerTask != null && !timerTask.isCancelled()) timerTask.cancel();
+        timerTask = null;
+        hide();
     }
 
-    /** Hide the BossBar from the player. */
+    /** Hide the BossBar from the player and null the reference. */
     public void hide() {
-        if (bossBar != null && player.isOnline()) player.hideBossBar(bossBar);
+        if (bossBar != null) {
+            if (player.isOnline()) player.hideBossBar(bossBar);
+            bossBar = null;
+        }
     }
 
     public void setProgress(float progress) {

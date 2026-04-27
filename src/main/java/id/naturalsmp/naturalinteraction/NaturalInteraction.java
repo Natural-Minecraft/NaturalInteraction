@@ -107,20 +107,12 @@ public final class NaturalInteraction extends JavaPlugin {
     }
 
     private void registerCommands() {
-        // /ni — main command (v2)
+        // /ni — main command (v2), aliases: /interaction, /inter
         NiCommand niCmd = new NiCommand(this);
         var niEntry = getCommand("ni");
         if (niEntry != null) {
             niEntry.setExecutor(niCmd);
             niEntry.setTabCompleter(niCmd);
-        }
-
-        // Legacy /interaction command still wired for backward compat
-        InteractionCommand interactionCmd = new InteractionCommand(this);
-        var interEntry = getCommand("interaction");
-        if (interEntry != null) {
-            interEntry.setExecutor(interactionCmd);
-            interEntry.setTabCompleter(interactionCmd);
         }
 
         if (getCommand("story") != null) {
