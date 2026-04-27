@@ -1,6 +1,5 @@
 package id.naturalsmp.naturalinteraction;
 
-import id.naturalsmp.naturalinteraction.commands.InteractionCommand;
 import id.naturalsmp.naturalinteraction.commands.NiCommand;
 import id.naturalsmp.naturalinteraction.commands.SidequestCommand;
 import id.naturalsmp.naturalinteraction.commands.StoryCommand;
@@ -13,6 +12,7 @@ import id.naturalsmp.naturalinteraction.listener.InteractionListener;
 import id.naturalsmp.naturalinteraction.listener.PrologueJoinListener;
 import id.naturalsmp.naturalinteraction.listener.ScrollListener;
 import id.naturalsmp.naturalinteraction.manager.InteractionManager;
+import id.naturalsmp.naturalinteraction.manifest.ManifestManager;
 import id.naturalsmp.naturalinteraction.npc.StoryNPCManager;
 import id.naturalsmp.naturalinteraction.story.StoryListener;
 import id.naturalsmp.naturalinteraction.story.StoryManager;
@@ -21,9 +21,12 @@ import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
 import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class NaturalInteraction extends JavaPlugin {
+public final class NaturalInteraction extends JavaPlugin implements Listener {
 
     private static NaturalInteraction instance;
 
@@ -34,6 +37,7 @@ public final class NaturalInteraction extends JavaPlugin {
     private PrologueJoinListener prologueJoinListener;
     private ElementalEffectManager elementalEffectManager;
     private FactsManager factsManager;
+    private ManifestManager manifestManager;
 
     @Override
     public void onEnable() {
@@ -72,16 +76,28 @@ public final class NaturalInteraction extends JavaPlugin {
         // Elemental NPC visual effects
         this.elementalEffectManager = new ElementalEffectManager(this);
 
+        // Manifest system (Phase 4 — declarative audience/display)
+        this.manifestManager = new ManifestManager(this);
+
+        // Register this class as listener for PlayerQuitEvent (manifest cleanup)
+        getServer().getPluginManager().registerEvents(this, this);
+
         getLogger().info(
                 ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>v"
                         + getDescription().getVersion() + " has been enabled!"));
     }
 
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        if (manifestManager != null) manifestManager.removePlayer(event.getPlayer());
+    }
+
     @Override
     public void onDisable() {
-        if (editorMode != null)         editorMode.disableAll();
-        if (storyManager != null)       storyManager.saveProgress();
+        if (editorMode != null)          editorMode.disableAll();
+        if (storyManager != null)        storyManager.saveProgress();
         if (elementalEffectManager != null) elementalEffectManager.stop();
+        if (manifestManager != null)     manifestManager.cleanup();
     }
 
     // ─── Registration ─────────────────────────────────────────────────────────
@@ -130,6 +146,7 @@ public final class NaturalInteraction extends JavaPlugin {
         if (storyManager != null)           storyManager.loadNodes();
         if (interactionManager != null)     interactionManager.loadInteractions();
         if (elementalEffectManager != null) elementalEffectManager.reload();
+        if (manifestManager != null)        manifestManager.reload();
     }
 
     // ─── Getters ──────────────────────────────────────────────────────────────
@@ -142,4 +159,5 @@ public final class NaturalInteraction extends JavaPlugin {
     public PrologueJoinListener getPrologueJoinListener()       { return prologueJoinListener; }
     public ElementalEffectManager getElementalEffectManager()   { return elementalEffectManager; }
     public FactsManager getFactsManager()                       { return factsManager; }
+    public ManifestManager getManifestManager()                 { return manifestManager; }
 }
