@@ -9,6 +9,7 @@ import id.naturalsmp.naturalinteraction.listener.DungeonCompletionListener;
 import id.naturalsmp.naturalinteraction.listener.EditorListener;
 import id.naturalsmp.naturalinteraction.listener.InteractionListener;
 import id.naturalsmp.naturalinteraction.listener.PrologueJoinListener;
+import id.naturalsmp.naturalinteraction.listener.ScrollListener;
 import id.naturalsmp.naturalinteraction.manager.InteractionManager;
 import id.naturalsmp.naturalinteraction.npc.StoryNPCManager;
 import id.naturalsmp.naturalinteraction.story.StoryListener;
@@ -16,6 +17,8 @@ import id.naturalsmp.naturalinteraction.story.StoryManager;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
 import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class NaturalInteraction extends JavaPlugin {
@@ -52,6 +55,15 @@ public final class NaturalInteraction extends JavaPlugin {
 
         registerEvents();
         registerCommands();
+
+        // Register ProtocolLib scroll listener for dialogue option cycling
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
+            protocolManager.addPacketListener(new ScrollListener(this));
+            getLogger().info("ProtocolLib scroll listener registered.");
+        } else {
+            getLogger().warning("ProtocolLib not found — scroll-to-cycle will use hotbar fallback only.");
+        }
 
         // Elemental NPC visual effects
         this.elementalEffectManager = new ElementalEffectManager(this);

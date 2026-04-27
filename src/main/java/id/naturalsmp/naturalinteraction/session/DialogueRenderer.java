@@ -9,9 +9,11 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -22,9 +24,12 @@ import java.util.List;
  * Renders all visual output during a dialogue session:
  *  - Typewriter effect on ActionBar
  *  - TextDisplay hologram above NPC head
- *  - Hotbar option items
+ *  - Hotbar option items with cycle-and-confirm selection
  *
- * Extracted from InteractionSession to separate the "rendering" concern.
+ * Selection model (TypewriterMC-style):
+ *  - Right-click / Scroll     → cycle through options
+ *  - Left-click / "F" key     → confirm highlighted option
+ *  - Hotbar slots 1–N         → direct jump to option index (infinite scroll wrap)
  */
 public class DialogueRenderer {
 
@@ -32,13 +37,17 @@ public class DialogueRenderer {
     private final Player player;
     private final Interaction interaction;
 
-    // Typewriter state
+    // ─── Typewriter state ─────────────────────────────────────────────────────
     private String fullDialogueText = "";
     private int revealedWords = 0;
     private boolean typewriterDone = false;
+
+    // ─── Selection state ──────────────────────────────────────────────────────
+    private List<Option> currentOptions = List.of();
+    private int selectedOptionIndex = 0;
     private boolean displayingOptions = false;
 
-    // Active tasks & entity
+    // ─── Active tasks & entity ────────────────────────────────────────────────
     private BukkitRunnable typewriterTask;
     private BukkitRunnable actionBarTask;
     private TextDisplay mainTextDisplay;
@@ -51,7 +60,6 @@ public class DialogueRenderer {
 
     // ─── Hologram ─────────────────────────────────────────────────────────────
 
-    /** Spawn (or re-spawn) the TextDisplay hologram at the given NPC base location. */
     public void initHologram(Location npcBase) {
         clearHologram();
         if (npcBase == null) return;
@@ -72,14 +80,13 @@ public class DialogueRenderer {
 
     // ─── Typewriter ───────────────────────────────────────────────────────────
 
-    /**
-     * Begin the typewriter effect. Call {@link #initHologram(Location)} first.
-     */
     public void startTypewriter(String rawText, List<Option> options) {
-        fullDialogueText = rawText.replace("%player%", player.getName());
-        revealedWords = 0;
-        typewriterDone = false;
-        displayingOptions = false;
+        this.currentOptions = options != null ? options : List.of();
+        this.selectedOptionIndex = 0;
+        this.displayingOptions = false;
+        this.fullDialogueText = rawText.replace("%player%", player.getName());
+        this.revealedWords = 0;
+        this.typewriterDone = false;
 
         String unicode = interaction.getDialogueUnicode();
         String prefix = unicode.isEmpty() ? "" : unicode + " ";
@@ -93,20 +100,19 @@ public class DialogueRenderer {
                 if (revealedWords >= totalWords) {
                     revealedWords = totalWords;
                     typewriterDone = true;
-                    if (!displayingOptions) displayHotbarOptions(options);
+                    if (!displayingOptions) showOptions();
                     cancel();
                 }
                 String revealed = getRevealedText(fullDialogueText, revealedWords);
                 String padding = " ".repeat(Math.max(0,
                         stripColors(fullDialogueText).length() - stripColors(revealed).length()));
-                player.sendActionBar(buildActionBar(unicode, prefix, revealed, padding, options));
-                updateHologram(revealed, options);
+                player.sendActionBar(buildActionBar(unicode, prefix, revealed, padding));
+                updateHologram(revealed);
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
             }
         };
         typewriterTask.runTaskTimer(plugin, 0L, 3L);
 
-        // Keep ActionBar alive after typewriter finishes (fades after ~2s)
         actionBarTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -115,26 +121,22 @@ public class DialogueRenderer {
                 String revealed = getRevealedText(fullDialogueText, revealedWords);
                 String padding = " ".repeat(Math.max(0,
                         stripColors(fullDialogueText).length() - stripColors(revealed).length()));
-                player.sendActionBar(buildActionBar(unicode, prefix, revealed, padding, options));
-                updateHologram(revealed, options);
+                player.sendActionBar(buildActionBar(unicode, prefix, revealed, padding));
+                updateHologram(revealed);
             }
         };
         actionBarTask.runTaskTimer(plugin, 0L, 20L);
     }
 
-    /**
-     * Instantly complete the typewriter (first skip press).
-     * Shows full text immediately and reveals hotbar options.
-     */
-    public void completeInstantly(List<Option> options) {
+    public void completeInstantly() {
         typewriterDone = true;
         revealedWords = stripColors(fullDialogueText).split(" ").length;
         cancelTypewriter();
-        if (!displayingOptions) displayHotbarOptions(options);
+        if (!displayingOptions) showOptions();
         String unicode = interaction.getDialogueUnicode();
         String prefix = unicode.isEmpty() ? "" : unicode + " ";
-        player.sendActionBar(buildActionBar(unicode, prefix, fullDialogueText, "", options));
-        updateHologram(fullDialogueText, options);
+        player.sendActionBar(buildActionBar(unicode, prefix, fullDialogueText, ""));
+        updateHologram(fullDialogueText);
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
     }
 
@@ -151,49 +153,148 @@ public class DialogueRenderer {
         player.sendActionBar(Component.empty());
     }
 
-    // ─── Hotbar Options ───────────────────────────────────────────────────────
+    // ─── Option Selection — Cycle & Confirm ───────────────────────────────────
 
-    public void displayHotbarOptions(List<Option> options) {
-        if (options == null || options.isEmpty()) return;
-        player.getInventory().setHeldItemSlot(4);
+    /**
+     * Show options in hotbar. Called automatically when typewriter completes.
+     * Each slot corresponds to an option index (infinite scroll wraps).
+     */
+    public void showOptions() {
+        if (currentOptions.isEmpty()) return;
+        player.getInventory().setHeldItemSlot(0);
         displayingOptions = true;
-        player.getInventory().clear();
-        for (int i = 0; i < Math.min(options.size(), 9); i++) {
-            ItemStack item = new ItemStack(Material.PAPER);
-            ItemMeta meta = item.getItemMeta();
-            meta.displayName(ChatUtils.toComponent("&#FFAA00&lPilih: &f" + options.get(i).getText()));
-            item.setItemMeta(meta);
-            player.getInventory().setItem(i, item);
-        }
+        selectedOptionIndex = 0;
+        renderHotbar();
+    }
+
+    /**
+     * Cycle to the next option (Right-click / Scroll Down).
+     * Wraps around infinitely.
+     */
+    public void cycleNext() {
+        if (!displayingOptions || currentOptions.isEmpty()) return;
+        selectedOptionIndex = (selectedOptionIndex + 1) % currentOptions.size();
+        renderHotbar();
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.5f);
+    }
+
+    /**
+     * Cycle to the previous option (Scroll Up).
+     * Wraps around infinitely.
+     */
+    public void cyclePrev() {
+        if (!displayingOptions || currentOptions.isEmpty()) return;
+        selectedOptionIndex = (selectedOptionIndex - 1 + currentOptions.size()) % currentOptions.size();
+        renderHotbar();
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.5f);
+    }
+
+    /**
+     * Jump directly to a specific option index via hotbar slot.
+     * Uses modulo so it wraps when options > 9.
+     */
+    public void jumpToSlot(int slot) {
+        if (!displayingOptions || currentOptions.isEmpty()) return;
+        int target = slot % currentOptions.size();
+        if (target == selectedOptionIndex) return;
+        selectedOptionIndex = target;
+        renderHotbar();
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.5f);
+    }
+
+    /**
+     * Confirm the currently highlighted option.
+     * Returns the selected Option, or null if none / not yet displaying.
+     */
+    public Option confirmSelected() {
+        if (!displayingOptions || currentOptions.isEmpty()) return null;
+        if (selectedOptionIndex < 0 || selectedOptionIndex >= currentOptions.size()) return null;
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.6f, 1.2f);
+        return currentOptions.get(selectedOptionIndex);
     }
 
     // ─── State ────────────────────────────────────────────────────────────────
 
     public boolean isTypewriterDone()    { return typewriterDone; }
     public boolean isDisplayingOptions() { return displayingOptions; }
+    public int getSelectedOptionIndex()  { return selectedOptionIndex; }
+    public List<Option> getCurrentOptions() { return currentOptions; }
+
+    // ─── Private Hotbar Rendering ─────────────────────────────────────────────
+
+    /**
+     * Render all options into the hotbar.
+     *
+     * Visual:
+     *  - Selected → LIME_DYE with enchant glow, gold name, "▶ Option Text"
+     *  - Others   → GRAY_DYE, gray name, "  Option Text"
+     */
+    private void renderHotbar() {
+        player.getInventory().clear();
+        for (int i = 0; i < currentOptions.size(); i++) {
+            Option opt = currentOptions.get(i);
+            boolean selected = (i == selectedOptionIndex);
+
+            ItemStack item = new ItemStack(selected ? Material.LIME_DYE : Material.GRAY_DYE);
+            ItemMeta meta = item.getItemMeta();
+
+            if (selected) {
+                String name = "&#FFAA00&l▶ &e" + opt.getText();
+                meta.displayName(ChatUtils.toComponent(name));
+                meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            } else {
+                String name = "&8  " + opt.getText();
+                meta.displayName(ChatUtils.toComponent(name));
+            }
+
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(meta);
+
+            // Wrap slot index (only 9 slots in hotbar)
+            int slot = i % 9;
+            player.getInventory().setItem(slot, item);
+        }
+
+        // Update hotbar held slot to visually follow selected index
+        player.getInventory().setHeldItemSlot(selectedOptionIndex % 9);
+
+        // Update hologram to show current highlighted option
+        updateHologram(getRevealedText(fullDialogueText, revealedWords));
+    }
 
     // ─── Private Helpers ──────────────────────────────────────────────────────
 
-    private void updateHologram(String revealedText, List<Option> options) {
+    private void updateHologram(String revealedText) {
         if (mainTextDisplay == null || !mainTextDisplay.isValid()) return;
         StringBuilder sb = new StringBuilder(revealedText);
-        if (typewriterDone && options != null && !options.isEmpty()) {
+        if (typewriterDone && !currentOptions.isEmpty()) {
             sb.append("\n");
-            for (int i = 0; i < options.size(); i++) {
-                sb.append("\n&#FFAA00&l").append(i + 1).append(" &#FFFF55>> &e")
-                  .append(options.get(i).getText());
+            for (int i = 0; i < currentOptions.size(); i++) {
+                boolean selected = (i == selectedOptionIndex);
+                if (selected) {
+                    sb.append("\n&#FFAA00&l▶ ").append(i + 1).append(". &e").append(currentOptions.get(i).getText());
+                } else {
+                    sb.append("\n&8  ").append(i + 1).append(". &7").append(currentOptions.get(i).getText());
+                }
             }
         }
         mainTextDisplay.text(ChatUtils.toComponent(sb.toString().trim()));
     }
 
-    private Component buildActionBar(String unicode, String prefix, String revealed,
-                                     String padding, List<Option> options) {
+    private Component buildActionBar(String unicode, String prefix, String revealed, String padding) {
         if (unicode == null || unicode.trim().isEmpty()) {
-            String instruction = (options != null && !options.isEmpty())
-                    ? "&#FF3333➤ &cKlik Hotbar 1-" + Math.min(options.size(), 8)
-                      + " &funtuk memilih   &8|   &#FF3333➤ &cShift &funtuk skip"
-                    : "&#FF3333➤ &cTekan Shift &funtuk skip interaksi";
+            String instruction;
+            if (displayingOptions && !currentOptions.isEmpty()) {
+                // Show confirm instructions
+                instruction = "&#FFD700▶ &e" + (selectedOptionIndex + 1) + "/" + currentOptions.size()
+                        + " &8| &fKlik Kanan&8/&fScroll &7untuk pilih   "
+                        + "&8| &fAttack&8/&f\"F\" &7untuk konfirmasi";
+            } else if (typewriterDone) {
+                instruction = "&#FF3333➤ &cTekan Shift &funtuk skip / lanjut";
+            } else {
+                instruction = "&#FF3333➤ &cTekan Shift &funtuk skip teks";
+            }
             return ChatUtils.toComponent(instruction);
         }
         return ChatUtils.toComponent(prefix + revealed + padding);

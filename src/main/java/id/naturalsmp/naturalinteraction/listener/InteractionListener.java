@@ -5,10 +5,30 @@ import id.naturalsmp.naturalinteraction.hook.InteractionTrait;
 import id.naturalsmp.naturalinteraction.manager.InteractionSession;
 import id.naturalsmp.naturalinteraction.utils.PluginConfig;
 import net.citizensnpcs.api.event.NPCRightClickEvent;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.*;
 
+/**
+ * Handles all player input during an active InteractionSession.
+ *
+ * Input mapping (TypewriterMC-style):
+ *  Right-click (no target)    → cycle to next option
+ *  Left-click (Attack)        → confirm highlighted option
+ *  "F" (swap hand)            → confirm highlighted option (alt)
+ *  Scroll / Hotbar change     → handled by ScrollListener (ProtocolLib)
+ *                               + PlayerItemHeldEvent fallback (direct slot jump)
+ *  Shift                      → skip / advance dialogue
+ *  NPC Right-click            → start interaction
+ */
 public class InteractionListener implements Listener {
 
     private final NaturalInteraction plugin;
@@ -17,62 +37,104 @@ public class InteractionListener implements Listener {
         this.plugin = plugin;
     }
 
+    // ─── Start Interaction ────────────────────────────────────────────────────
+
     @EventHandler
     public void onNPCClick(NPCRightClickEvent event) {
-        if (event.getNPC().hasTrait(InteractionTrait.class)) {
-            InteractionTrait trait = event.getNPC().getTrait(InteractionTrait.class);
-            String interactionId = trait.getInteractionId();
-
-            if (interactionId != null) {
-                plugin.getInteractionManager().startInteraction(event.getClicker(), interactionId);
-                event.setCancelled(true);
-            }
+        if (!event.getNPC().hasTrait(InteractionTrait.class)) return;
+        InteractionTrait trait = event.getNPC().getTrait(InteractionTrait.class);
+        String interactionId = trait.getInteractionId();
+        if (interactionId != null) {
+            plugin.getInteractionManager().startInteraction(event.getClicker(), interactionId);
+            event.setCancelled(true);
         }
     }
 
-    @EventHandler
-    public void onDamage(org.bukkit.event.entity.EntityDamageEvent event) {
-        if (event.getEntity() instanceof Player player) {
-            if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
-                event.setCancelled(true);
-            }
-        }
-    }
-
-    @EventHandler
-    public void onDealtDamage(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Player player) {
-            if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
-                event.setCancelled(true);
-            }
-        }
-    }
+    // ─── Input: Right-click → Cycle Next ─────────────────────────────────────
 
     /**
-     * Block movement during interaction (cinematic lock enforcement)
+     * Right-click in the air (Place Block action, no target block) → cycle next option.
+     * We must allow NPC right-click to pass through to NPCRightClickEvent above.
      */
-    @EventHandler
-    public void onMove(org.bukkit.event.player.PlayerMoveEvent event) {
+    @EventHandler(priority = EventPriority.HIGH)
+    public void onRightClick(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
-        if (session != null) {
-            // Allow looking around (head rotation) but block position change
-            if (event.getFrom().getBlockX() != event.getTo().getBlockX()
-                    || event.getFrom().getBlockY() != event.getTo().getBlockY()
-                    || event.getFrom().getBlockZ() != event.getTo().getBlockZ()) {
-                event.setCancelled(true);
-            }
+        if (session == null) return;
+
+        Action action = event.getAction();
+
+        // Right-click with no block target → cycle next
+        if ((action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK)
+                && session.isDisplayingOptions()) {
+            event.setCancelled(true);
+            session.cycleNext();
+            return;
+        }
+
+        // Left-click → confirm selected option
+        if ((action == Action.LEFT_CLICK_AIR || action == Action.LEFT_CLICK_BLOCK)
+                && session.isDisplayingOptions()) {
+            event.setCancelled(true);
+            session.confirmSelected();
+            return;
+        }
+
+        // Cancel all other interactions during a session
+        event.setCancelled(true);
+    }
+
+    // ─── Input: "F" key (Swap Hand) → Confirm ────────────────────────────────
+
+    @EventHandler
+    public void onSwapHand(PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
+        if (session == null) return;
+        event.setCancelled(true);
+        if (session.isDisplayingOptions()) {
+            session.confirmSelected();
         }
     }
 
+    // ─── Input: Hotbar Slot Change → Jump to Option (fallback for scroll) ────
+
     /**
-     * Sneak to Skip — press shift to skip dialogue / advance
+     * PlayerItemHeldEvent fires on:
+     *  1. Mouse scroll (primary method if ProtocolLib scroll fails)
+     *  2. Number key press (1-9)
+     *
+     * We use slot index as direct option jump. Infinite scroll wraps.
      */
     @EventHandler
-    public void onSneak(org.bukkit.event.player.PlayerToggleSneakEvent event) {
-        if (!event.isSneaking())
-            return; // Only trigger on sneak START
+    public void onItemHeldChange(PlayerItemHeldEvent event) {
+        Player player = event.getPlayer();
+        InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
+        if (session == null || !session.isDisplayingOptions()) return;
 
+        event.setCancelled(true); // Don't actually change the held slot
+
+        int prev = event.getPreviousSlot();
+        int next = event.getNewSlot();
+
+        // Detect scroll direction from slot delta
+        // Scroll up: slot decreases (or wraps 0 → 8)
+        // Scroll down: slot increases (or wraps 8 → 0)
+        boolean scrolledUp = (next < prev && !(prev == 8 && next == 0))
+                || (prev == 0 && next == 8);
+
+        if (scrolledUp) {
+            session.cyclePrev();
+        } else {
+            session.cycleNext();
+        }
+    }
+
+    // ─── Input: Shift → Skip / Advance ───────────────────────────────────────
+
+    @EventHandler
+    public void onSneak(PlayerToggleSneakEvent event) {
+        if (!event.isSneaking()) return; // Only on sneak start
         Player player = event.getPlayer();
         InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
         if (session != null) {
@@ -80,70 +142,67 @@ public class InteractionListener implements Listener {
         }
     }
 
-    /**
-     * Click floating TextDisplay choices above NPC head
-     */
-    @EventHandler
-    public void onChoiceClick(org.bukkit.event.player.PlayerInteractEntityEvent event) {
-        if (event.getRightClicked() instanceof org.bukkit.entity.Interaction interactionEntity) {
-            org.bukkit.persistence.PersistentDataContainer pdc = interactionEntity.getPersistentDataContainer();
-            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey(plugin, "choice_index");
-
-            if (pdc.has(key, org.bukkit.persistence.PersistentDataType.INTEGER)) {
-                int index = pdc.get(key, org.bukkit.persistence.PersistentDataType.INTEGER);
-                Player player = event.getPlayer();
-                InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
-
-                if (session != null) {
-                    session.selectOptionByIndex(index);
-                }
-            }
-        }
-    }
+    // ─── Protective Cancels ───────────────────────────────────────────────────
 
     @EventHandler
-    public void onItemHeldChange(org.bukkit.event.player.PlayerItemHeldEvent event) {
-        Player player = event.getPlayer();
-        InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
-        if (session != null && session.isDisplayingOptions()) {
+    public void onDamageReceived(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player player
+                && plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
             event.setCancelled(true);
-            int slot = event.getNewSlot(); // 0 to 8
-            session.selectOptionByIndex(slot);
         }
     }
 
     @EventHandler
-    public void onDrop(org.bukkit.event.player.PlayerDropItemEvent event) {
+    public void onDamageDealt(EntityDamageByEntityEvent event) {
+        if (event.getDamager() instanceof Player player
+                && plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** Block position change but allow head rotation (looking around). */
+    @EventHandler
+    public void onMove(PlayerMoveEvent event) {
+        Player player = event.getPlayer();
+        if (plugin.getInteractionManager().getSession(player.getUniqueId()) == null) return;
+        if (event.getFrom().getBlockX() != event.getTo().getBlockX()
+                || event.getFrom().getBlockY() != event.getTo().getBlockY()
+                || event.getFrom().getBlockZ() != event.getTo().getBlockZ()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onDrop(PlayerDropItemEvent event) {
         if (plugin.getInteractionManager().getSession(event.getPlayer().getUniqueId()) != null) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
-    public void onClick(org.bukkit.event.inventory.InventoryClickEvent event) {
-        if (event.getWhoClicked() instanceof Player player) {
-            if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
-                event.setCancelled(true);
-            }
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (event.getWhoClicked() instanceof Player player
+                && plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
+            event.setCancelled(true);
         }
     }
 
     @EventHandler
-    public void onDrag(org.bukkit.event.inventory.InventoryDragEvent event) {
-        if (event.getWhoClicked() instanceof Player player) {
-            if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
-                event.setCancelled(true);
-            }
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (event.getWhoClicked() instanceof Player player
+                && plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
+            event.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
-    public void onCommand(org.bukkit.event.player.PlayerCommandPreprocessEvent event) {
-        Player player = event.getPlayer();
-        if (player.hasPermission("naturalsmp.admin"))
-            return;
+    // ─── Command Blocking ─────────────────────────────────────────────────────
 
-        // Any command blocked during interaction
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onCommand(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        if (player.hasPermission("naturalsmp.admin")) return;
+
+        // Block commands during active session
         if (plugin.getInteractionManager().getSession(player.getUniqueId()) != null) {
             event.setCancelled(true);
             player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
@@ -151,7 +210,7 @@ public class InteractionListener implements Listener {
             return;
         }
 
-        // Block ALL commands for players who haven't completed prologue
+        // Block commands for players who haven't completed prologue
         String prologueId = PluginConfig.getPrologueInteractionId(plugin);
         if (!plugin.getInteractionManager().getCompletionTracker()
                 .hasCompleted(player.getUniqueId(), prologueId)) {
@@ -161,24 +220,22 @@ public class InteractionListener implements Listener {
             return;
         }
 
-        // Block commands in prologue world
+        // Block commands inside prologue world
         String prologueWorld = PluginConfig.getPrologueWorld(plugin);
         if (player.getWorld().getName().equalsIgnoreCase(prologueWorld)) {
             event.setCancelled(true);
             player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
-                    .toComponent("&cKamu belum bisa menggunakan command di dunia ini. Selesaikan prologue-nya!"));
+                    .toComponent("&cKamu belum bisa menggunakan command di dunia ini!"));
         }
     }
 
-    /**
-     * Clean up session on player disconnect — prevents inventory corruption
-     */
+    // ─── Disconnect Cleanup ───────────────────────────────────────────────────
+
     @EventHandler
-    public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+    public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         InteractionSession session = plugin.getInteractionManager().getSession(player.getUniqueId());
         if (session != null) {
-            // Force cleanup without rewards — player must redo the interaction
             session.forceCleanup();
         }
     }

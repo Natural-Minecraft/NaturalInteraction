@@ -68,6 +68,10 @@
             <id>matteodev</id>
             <url>https://maven.devs.beer/</url>
         </repository>
+        <repository>
+            <id>dmulloy2-repo</id>
+            <url>https://repo.dmulloy2.net/repository/public/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -112,6 +116,12 @@
             <groupId>dev.lone</groupId>
             <artifactId>api-itemsadder</artifactId>
             <version>4.0.10</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.comphenix.protocol</groupId>
+            <artifactId>ProtocolLib</artifactId>
+            <version>5.3.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

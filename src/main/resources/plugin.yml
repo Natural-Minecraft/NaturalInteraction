@@ -4,8 +4,8 @@ main: id.naturalsmp.naturalinteraction.NaturalInteraction
 api-version: 1.21
 authors: [NaturalSMP]
 description: Advanced RPG Story and NPC Interaction System
-depend: [Citizens, NaturalCore]
-softdepend: [PlaceholderAPI, NaturalDungeon, ProtocolLib, NaturalPass, ItemsAdder]
+depend: [Citizens, NaturalCore, ProtocolLib]
+softdepend: [PlaceholderAPI, NaturalDungeon, NaturalPass, ItemsAdder]
 
 commands:
   interaction:

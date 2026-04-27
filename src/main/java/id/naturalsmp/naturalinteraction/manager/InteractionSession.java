@@ -148,12 +148,11 @@ public class InteractionSession {
 
         // First skip = complete typewriter instantly
         if (!dialogueRenderer.isTypewriterDone()) {
-            dialogueRenderer.completeInstantly(
-                    currentNode != null ? currentNode.getOptions() : null);
+            dialogueRenderer.completeInstantly();
             return;
         }
 
-        // Mandatory with options = player MUST pick, cannot skip past
+        // Mandatory with options = player MUST pick one
         if (interaction.isMandatory() && currentNode != null && !currentNode.getOptions().isEmpty()) return;
 
         // Second skip = advance
@@ -162,26 +161,42 @@ public class InteractionSession {
         handleTimeout();
     }
 
-    // ─── Option Selection ─────────────────────────────────────────────────────
+    // ─── Option Selection (Cycle/Confirm model) ───────────────────────────────
 
-    public void selectOption(Option option) {
+    /** Cycle to the next option (Right-click / Scroll Down). */
+    public void cycleNext() {
+        if (plugin.getInteractionManager().getSession(player.getUniqueId()) != this) return;
+        dialogueRenderer.cycleNext();
+    }
+
+    /** Cycle to the previous option (Scroll Up). */
+    public void cyclePrev() {
+        if (plugin.getInteractionManager().getSession(player.getUniqueId()) != this) return;
+        dialogueRenderer.cyclePrev();
+    }
+
+    /** Jump directly to option index via hotbar slot. */
+    public void jumpToSlot(int slot) {
+        if (plugin.getInteractionManager().getSession(player.getUniqueId()) != this) return;
+        dialogueRenderer.jumpToSlot(slot);
+    }
+
+    /**
+     * Confirm the currently highlighted option (Left-click / "F" key).
+     * No-op if typewriter hasn't finished or no options are shown.
+     */
+    public void confirmSelected() {
         if (plugin.getInteractionManager().getSession(player.getUniqueId()) != this) {
             player.sendMessage(Component.text("Interaksi ini telah kedaluwarsa.", NamedTextColor.RED));
             return;
         }
-        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+        if (!dialogueRenderer.isDisplayingOptions()) return;
+        Option chosen = dialogueRenderer.confirmSelected();
+        if (chosen == null) return;
+
         timerController.stop();
         dialogueRenderer.cancelAll();
-        playNode(interaction.getNode(option.getTargetNodeId()));
-    }
-
-    public void selectOptionByIndex(int index) {
-        if (currentNode == null || index < 0 || index >= currentNode.getOptions().size()) return;
-        selectOption(currentNode.getOptions().get(index));
-    }
-
-    public boolean isDisplayingOptions() {
-        return dialogueRenderer.isDisplayingOptions();
+        playNode(interaction.getNode(chosen.getTargetNodeId()));
     }
 
     // ─── Session End ──────────────────────────────────────────────────────────
