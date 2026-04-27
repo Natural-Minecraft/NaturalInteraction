@@ -1,10 +1,29 @@
 # NaturalInteraction Configuration
 
-# General settings
 settings:
   debug: false
-  
-# Placeholder for future settings
+
 interaction:
   default-range: 3.0
   cooldown: 1.0
+
+# Prologue system configuration
+# Semua nilai yang sebelumnya hardcoded di kode kini bisa diubah di sini
+prologue:
+  # ID dari interaction prologue
+  interaction-id: "prologue"
+  # ID NPC Citizens yang digunakan sebagai narator prologue
+  npc-id: 69
+  # World yang digunakan sebagai arena prologue
+  world: "story_sky"
+  # Hologram default NPC setelah prologue selesai (§8§l????)
+  npc-hologram-default: "§8§l????"
+  # Hologram "!" yang ditambahkan ke baris ke-2 setelah prologue selesai
+  npc-hologram-exclamation: "§b§l!"
+
+# Plugin command integration (untuk soft-dependency)
+plugins:
+  # Plugin untuk teleportasi antar world (Multiverse-Core)
+  multiverse-teleport-command: "mvtp"
+  # Plugin sudo (EssentialsX atau CommandOverride)
+  sudo-command: "sudo"

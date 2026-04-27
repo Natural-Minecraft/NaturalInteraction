@@ -1,23 +1,33 @@
 package id.naturalsmp.naturalinteraction;
 
-import id.naturalsmp.naturalinteraction.utils.ChatUtils;
-import id.naturalsmp.naturalinteraction.story.StoryManager;
 import id.naturalsmp.naturalinteraction.commands.InteractionCommand;
-import id.naturalsmp.naturalinteraction.manager.InteractionManager;
+import id.naturalsmp.naturalinteraction.commands.SidequestCommand;
+import id.naturalsmp.naturalinteraction.commands.StoryCommand;
 import id.naturalsmp.naturalinteraction.editor.EditorMode;
 import id.naturalsmp.naturalinteraction.hook.CitizensHook;
+import id.naturalsmp.naturalinteraction.listener.DungeonCompletionListener;
+import id.naturalsmp.naturalinteraction.listener.EditorListener;
+import id.naturalsmp.naturalinteraction.listener.InteractionListener;
+import id.naturalsmp.naturalinteraction.listener.PrologueJoinListener;
+import id.naturalsmp.naturalinteraction.manager.InteractionManager;
 import id.naturalsmp.naturalinteraction.npc.StoryNPCManager;
+import id.naturalsmp.naturalinteraction.story.StoryListener;
+import id.naturalsmp.naturalinteraction.story.StoryManager;
+import id.naturalsmp.naturalinteraction.utils.ChatUtils;
+import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
+import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class NaturalInteraction extends JavaPlugin {
 
     private static NaturalInteraction instance;
+
     private StoryManager storyManager;
     private StoryNPCManager npcManager;
     private InteractionManager interactionManager;
     private EditorMode editorMode;
-    private id.naturalsmp.naturalinteraction.listener.PrologueJoinListener prologueJoinListener;
-    private id.naturalsmp.naturalinteraction.visual.ElementalEffectManager elementalEffectManager;
+    private PrologueJoinListener prologueJoinListener;
+    private ElementalEffectManager elementalEffectManager;
 
     @Override
     public void onEnable() {
@@ -27,117 +37,88 @@ public final class NaturalInteraction extends JavaPlugin {
         saveDefaultConfig();
 
         // Managers
-        this.storyManager = new StoryManager(this);
-        this.npcManager = new StoryNPCManager(this);
+        this.storyManager       = new StoryManager(this);
+        this.npcManager         = new StoryNPCManager(this);
         this.interactionManager = new InteractionManager(this);
-        this.editorMode = new EditorMode(this);
+        this.editorMode         = new EditorMode(this);
 
-        // Citizens
+        // Citizens traits
         CitizensHook.registerTraits(this);
 
-        // PAPI
+        // PlaceholderAPI expansion
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion(this).register();
+            new NaturalInteractionExpansion(this).register();
         }
 
         registerEvents();
+        registerCommands();
 
-        // Commands
-        InteractionCommand cmd = new InteractionCommand(this);
-        getCommand("interaction").setExecutor(cmd);
-        getCommand("interaction").setTabCompleter(cmd);
-        if (getCommand("story") != null) {
-            getCommand("story").setExecutor(new id.naturalsmp.naturalinteraction.commands.StoryCommand(this));
-        }
-        
-        if (getCommand("sidequest") != null) {
-            getCommand("sidequest").setExecutor(new id.naturalsmp.naturalinteraction.command.SidequestCommand(this));
-        }
-
-        // Elemental NPC Visual Effects
-        this.elementalEffectManager = new id.naturalsmp.naturalinteraction.visual.ElementalEffectManager(this);
+        // Elemental NPC visual effects
+        this.elementalEffectManager = new ElementalEffectManager(this);
 
         getLogger().info(
-                ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>has been enabled!"));
-    }
-
-    private void registerEvents() {
-        getServer().getPluginManager()
-                .registerEvents(new id.naturalsmp.naturalinteraction.story.StoryListener(storyManager), this);
-        getServer().getPluginManager()
-                .registerEvents(new id.naturalsmp.naturalinteraction.utils.EditorListener(this), this);
-        getServer().getPluginManager()
-                .registerEvents(new id.naturalsmp.naturalinteraction.listener.InteractionListener(this),
-                        this);
-        getServer().getPluginManager()
-                .registerEvents(new id.naturalsmp.naturalinteraction.gui.GUIListener(), this);
-        getServer().getPluginManager()
-                .registerEvents(new id.naturalsmp.naturalinteraction.editor.EditorHotbarListener(this), this);
-
-        // Prologue join enforcement
-        this.prologueJoinListener = new id.naturalsmp.naturalinteraction.listener.PrologueJoinListener(this);
-        getServer().getPluginManager().registerEvents(prologueJoinListener, this);
-
-        // Dungeon-Story Integration (soft dependency)
-        if (getServer().getPluginManager().getPlugin("NaturalDungeon") != null) {
-            getServer().getPluginManager()
-                    .registerEvents(new id.naturalsmp.naturalinteraction.listener.DungeonCompletionListener(this),
-                            this);
-            getLogger().info("Dungeon-Story Integration enabled!");
-        }
-    }
-
-    public void reloadPlugin() {
-        reloadConfig();
-        if (storyManager != null) {
-            storyManager.loadNodes();
-        }
-        if (interactionManager != null) {
-            interactionManager.loadInteractions();
-        }
-        if (elementalEffectManager != null) {
-            elementalEffectManager.reload();
-        }
+                ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>v"
+                        + getDescription().getVersion() + " has been enabled!"));
     }
 
     @Override
     public void onDisable() {
-        if (editorMode != null) {
-            editorMode.disableAll();
+        if (editorMode != null)         editorMode.disableAll();
+        if (storyManager != null)       storyManager.saveProgress();
+        if (elementalEffectManager != null) elementalEffectManager.stop();
+    }
+
+    // ─── Registration ─────────────────────────────────────────────────────────
+
+    private void registerEvents() {
+        var pm = getServer().getPluginManager();
+
+        pm.registerEvents(new StoryListener(storyManager), this);
+        pm.registerEvents(new EditorListener(this), this);           // Now in listener package
+        pm.registerEvents(new InteractionListener(this), this);
+        pm.registerEvents(new id.naturalsmp.naturalinteraction.gui.GUIListener(), this);
+        pm.registerEvents(new id.naturalsmp.naturalinteraction.editor.EditorHotbarListener(this), this);
+
+        // Prologue join enforcement
+        this.prologueJoinListener = new PrologueJoinListener(this);
+        pm.registerEvents(prologueJoinListener, this);
+
+        // Dungeon-Story integration (soft dependency)
+        if (getServer().getPluginManager().getPlugin("NaturalDungeon") != null) {
+            pm.registerEvents(new DungeonCompletionListener(this), this);
+            getLogger().info("Dungeon-Story Integration enabled.");
         }
-        if (storyManager != null) {
-            storyManager.saveProgress();
+    }
+
+    private void registerCommands() {
+        InteractionCommand interactionCmd = new InteractionCommand(this);
+        getCommand("interaction").setExecutor(interactionCmd);
+        getCommand("interaction").setTabCompleter(interactionCmd);
+
+        if (getCommand("story") != null) {
+            getCommand("story").setExecutor(new StoryCommand(this));
         }
-        if (elementalEffectManager != null) {
-            elementalEffectManager.stop();
+        if (getCommand("sidequest") != null) {
+            getCommand("sidequest").setExecutor(new SidequestCommand(this)); // Now in commands package
         }
     }
 
-    public static NaturalInteraction getInstance() {
-        return instance;
+    // ─── Plugin Reload ────────────────────────────────────────────────────────
+
+    public void reloadPlugin() {
+        reloadConfig();
+        if (storyManager != null)           storyManager.loadNodes();
+        if (interactionManager != null)     interactionManager.loadInteractions();
+        if (elementalEffectManager != null) elementalEffectManager.reload();
     }
 
-    public StoryManager getStoryManager() {
-        return storyManager;
-    }
+    // ─── Getters ──────────────────────────────────────────────────────────────
 
-    public StoryNPCManager getNpcManager() {
-        return npcManager;
-    }
-
-    public InteractionManager getInteractionManager() {
-        return interactionManager;
-    }
-
-    public EditorMode getEditorMode() {
-        return editorMode;
-    }
-
-    public id.naturalsmp.naturalinteraction.listener.PrologueJoinListener getPrologueJoinListener() {
-        return prologueJoinListener;
-    }
-
-    public id.naturalsmp.naturalinteraction.visual.ElementalEffectManager getElementalEffectManager() {
-        return elementalEffectManager;
-    }
+    public static NaturalInteraction getInstance()          { return instance; }
+    public StoryManager getStoryManager()                   { return storyManager; }
+    public StoryNPCManager getNpcManager()                  { return npcManager; }
+    public InteractionManager getInteractionManager()       { return interactionManager; }
+    public EditorMode getEditorMode()                       { return editorMode; }
+    public PrologueJoinListener getPrologueJoinListener()   { return prologueJoinListener; }
+    public ElementalEffectManager getElementalEffectManager() { return elementalEffectManager; }
 }

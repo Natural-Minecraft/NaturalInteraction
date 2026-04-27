@@ -1,11 +1,11 @@
 name: NaturalInteraction
-version: 1.0.0
+version: 1.3.0
 main: id.naturalsmp.naturalinteraction.NaturalInteraction
 api-version: 1.21
 authors: [NaturalSMP]
 description: Advanced RPG Story and NPC Interaction System
 depend: [Citizens, NaturalCore]
-softdepend: [ProtocolLib, NaturalPass]
+softdepend: [PlaceholderAPI, NaturalDungeon, ProtocolLib, NaturalPass, ItemsAdder]
 
 commands:
   interaction:

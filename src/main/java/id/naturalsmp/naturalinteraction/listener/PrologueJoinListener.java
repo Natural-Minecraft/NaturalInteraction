@@ -2,6 +2,7 @@ package id.naturalsmp.naturalinteraction.listener;
 
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import id.naturalsmp.naturalinteraction.manager.CompletionTracker;
+import id.naturalsmp.naturalinteraction.utils.PluginConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -31,7 +32,6 @@ import java.util.UUID;
  */
 public class PrologueJoinListener implements Listener {
 
-    private static final String PROLOGUE_ID = "prologue";
     private final NaturalInteraction plugin;
     private final File savedDataFolder;
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -59,19 +59,22 @@ public class PrologueJoinListener implements Listener {
             public void run() {
                 if (!player.isOnline()) return;
 
-                if (!tracker.hasCompleted(player.getUniqueId(), PROLOGUE_ID)) {
+                String prologueId = PluginConfig.getPrologueInteractionId(plugin);
+                if (!tracker.hasCompleted(player.getUniqueId(), prologueId)) {
                     // Player hasn't done prologue — save data and teleport to story_sky
 
                     // Only save if not already in story_sky AND no existing save
                     // (prevent overwriting good save with corrupted data on re-join)
-                    if (!player.getWorld().getName().equalsIgnoreCase("story_sky")
+                    String prologueWorld = PluginConfig.getPrologueWorld(plugin);
+                    if (!player.getWorld().getName().equalsIgnoreCase(prologueWorld)
                             && !hasSavedData(player.getUniqueId())) {
                         savePlayerData(player);
                     }
 
-                    // Teleport to story_sky via Multiverse
+                    // Teleport to prologue world via Multiverse
+                    String mvCmd = PluginConfig.getMultiverseTeleportCommand(plugin);
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                            "mvtp " + player.getName() + " story_sky");
+                            mvCmd + " " + player.getName() + " " + prologueWorld);
 
                     player.sendMessage(Component.text("✦ ", NamedTextColor.GOLD)
                             .append(Component.text("Kamu harus menyelesaikan prologue terlebih dahulu!", NamedTextColor.YELLOW)));

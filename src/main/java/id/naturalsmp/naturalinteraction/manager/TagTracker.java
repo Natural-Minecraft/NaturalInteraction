@@ -12,10 +12,12 @@ import java.lang.reflect.Type;
 import java.util.*;
 
 /**
- * Tracks arbitrary string tags for players to manage quests and varied interaction states.
+ * Tracks arbitrary string tags for players to manage quest branching states.
  * Persisted as JSON files per-player in plugins/NaturalInteraction/tags/
+ * All file writes are executed asynchronously to prevent main-thread I/O lag.
  */
 public class TagTracker {
+
     private final NaturalInteraction plugin;
     private final File tagsFolder;
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -32,54 +34,37 @@ public class TagTracker {
         loadAll();
     }
 
-    /**
-     * Check if a player has a specific tag
-     */
     public boolean hasTag(UUID player, String tag) {
         Set<String> tags = tagData.get(player);
         return tags != null && tags.contains(tag);
     }
 
-    /**
-     * Add a tag for a player
-     */
     public void addTag(UUID player, String tag) {
         tagData.computeIfAbsent(player, k -> new HashSet<>()).add(tag);
-        savePlayer(player);
+        savePlayerAsync(player);
     }
 
-    /**
-     * Remove a specific tag for a player
-     */
     public void removeTag(UUID player, String tag) {
         Set<String> tags = tagData.get(player);
-        if (tags != null) {
-            tags.remove(tag);
-            savePlayer(player);
+        if (tags != null && tags.remove(tag)) {
+            savePlayerAsync(player);
         }
     }
 
-    /**
-     * Get all tags for a player
-     */
     public Set<String> getTags(UUID player) {
-        return tagData.getOrDefault(player, new HashSet<>());
+        return tagData.getOrDefault(player, Collections.emptySet());
     }
 
-    /**
-     * Reset all tags for a player
-     */
     public void resetAll(UUID player) {
         tagData.remove(player);
-        File file = new File(tagsFolder, player.toString() + ".json");
-        if (file.exists()) {
-            file.delete();
-        }
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            File file = new File(tagsFolder, player + ".json");
+            if (file.exists()) file.delete();
+        });
     }
 
-    /**
-     * Load all tag data from disk
-     */
+    // ─── Internal I/O ─────────────────────────────────────────────────────────
+
     private void loadAll() {
         tagData.clear();
         File[] files = tagsFolder.listFiles((dir, name) -> name.endsWith(".json"));
@@ -88,12 +73,9 @@ public class TagTracker {
         Type setType = new TypeToken<Set<String>>() {}.getType();
         for (File file : files) {
             try (FileReader reader = new FileReader(file)) {
-                String uuidStr = file.getName().replace(".json", "");
-                UUID uuid = UUID.fromString(uuidStr);
+                UUID uuid = UUID.fromString(file.getName().replace(".json", ""));
                 Set<String> tags = gson.fromJson(reader, setType);
-                if (tags != null) {
-                    tagData.put(uuid, tags);
-                }
+                if (tags != null) tagData.put(uuid, tags);
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to load tag data: " + file.getName());
             }
@@ -101,24 +83,20 @@ public class TagTracker {
         plugin.getLogger().info("Loaded tag data for " + tagData.size() + " players.");
     }
 
-    /**
-     * Save tag data for a specific player
-     */
-    private void savePlayer(UUID player) {
-        Set<String> tags = tagData.get(player);
-        if (tags == null || tags.isEmpty()) {
-            // Delete file if no tags
-            File file = new File(tagsFolder, player.toString() + ".json");
-            if (file.exists()) file.delete();
-            return;
-        }
-
-        File file = new File(tagsFolder, player.toString() + ".json");
-        try (FileWriter writer = new FileWriter(file)) {
-            gson.toJson(tags, writer);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Failed to save tag data for " + player);
-            e.printStackTrace();
-        }
+    private void savePlayerAsync(UUID player) {
+        Set<String> snapshot = new HashSet<>(tagData.getOrDefault(player, Collections.emptySet()));
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            File file = new File(tagsFolder, player + ".json");
+            if (snapshot.isEmpty()) {
+                if (file.exists()) file.delete();
+                return;
+            }
+            try (FileWriter writer = new FileWriter(file)) {
+                gson.toJson(snapshot, writer);
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to save tag data for " + player);
+                e.printStackTrace();
+            }
+        });
     }
 }

@@ -14,8 +14,10 @@ import java.util.*;
 /**
  * Tracks which players have completed which interactions.
  * Persisted as JSON files per-player in plugins/NaturalInteraction/completions/
+ * All file writes are executed asynchronously to prevent main-thread I/O lag.
  */
 public class CompletionTracker {
+
     private final NaturalInteraction plugin;
     private final File completionsFolder;
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -32,63 +34,49 @@ public class CompletionTracker {
         loadAll();
     }
 
-    /**
-     * Check if a player has completed a specific interaction
-     */
     public boolean hasCompleted(UUID player, String interactionId) {
         Set<String> completed = completionData.get(player);
         return completed != null && completed.contains(interactionId);
     }
 
-    /**
-     * Mark an interaction as completed for a player
-     */
     public void markCompleted(UUID player, String interactionId) {
         completionData.computeIfAbsent(player, k -> new HashSet<>()).add(interactionId);
-        savePlayer(player);
+        savePlayerAsync(player);
     }
 
-    /**
-     * Remove completion record (for admin reset)
-     */
     public void resetCompletion(UUID player, String interactionId) {
         Set<String> completed = completionData.get(player);
         if (completed != null) {
             completed.remove(interactionId);
-            savePlayer(player);
+            savePlayerAsync(player);
         }
     }
 
-    /**
-     * Reset all completions for a player
-     */
     public void resetAll(UUID player) {
         completionData.remove(player);
-        File file = new File(completionsFolder, player.toString() + ".json");
-        if (file.exists()) {
-            file.delete();
-        }
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            File file = new File(completionsFolder, player + ".json");
+            if (file.exists()) file.delete();
+        });
     }
 
-    /**
-     * Load all completion data from disk
-     */
+    public Set<String> getCompleted(UUID player) {
+        return completionData.getOrDefault(player, Collections.emptySet());
+    }
+
+    // ─── Internal I/O ─────────────────────────────────────────────────────────
+
     private void loadAll() {
         completionData.clear();
         File[] files = completionsFolder.listFiles((dir, name) -> name.endsWith(".json"));
-        if (files == null)
-            return;
+        if (files == null) return;
 
-        Type setType = new TypeToken<Set<String>>() {
-        }.getType();
+        Type setType = new TypeToken<Set<String>>() {}.getType();
         for (File file : files) {
             try (FileReader reader = new FileReader(file)) {
-                String uuidStr = file.getName().replace(".json", "");
-                UUID uuid = UUID.fromString(uuidStr);
+                UUID uuid = UUID.fromString(file.getName().replace(".json", ""));
                 Set<String> completed = gson.fromJson(reader, setType);
-                if (completed != null) {
-                    completionData.put(uuid, completed);
-                }
+                if (completed != null) completionData.put(uuid, completed);
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to load completion data: " + file.getName());
             }
@@ -96,25 +84,20 @@ public class CompletionTracker {
         plugin.getLogger().info("Loaded completion data for " + completionData.size() + " players.");
     }
 
-    /**
-     * Save completion data for a specific player
-     */
-    private void savePlayer(UUID player) {
-        Set<String> completed = completionData.get(player);
-        if (completed == null || completed.isEmpty()) {
-            // Delete file if no completions
-            File file = new File(completionsFolder, player.toString() + ".json");
-            if (file.exists())
-                file.delete();
-            return;
-        }
-
-        File file = new File(completionsFolder, player.toString() + ".json");
-        try (FileWriter writer = new FileWriter(file)) {
-            gson.toJson(completed, writer);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Failed to save completion data for " + player);
-            e.printStackTrace();
-        }
+    private void savePlayerAsync(UUID player) {
+        Set<String> snapshot = new HashSet<>(completionData.getOrDefault(player, Collections.emptySet()));
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            File file = new File(completionsFolder, player + ".json");
+            if (snapshot.isEmpty()) {
+                if (file.exists()) file.delete();
+                return;
+            }
+            try (FileWriter writer = new FileWriter(file)) {
+                gson.toJson(snapshot, writer);
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to save completion data for " + player);
+                e.printStackTrace();
+            }
+        });
     }
 }

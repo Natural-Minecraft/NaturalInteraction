@@ -3,6 +3,7 @@ package id.naturalsmp.naturalinteraction.listener;
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import id.naturalsmp.naturalinteraction.hook.InteractionTrait;
 import id.naturalsmp.naturalinteraction.manager.InteractionSession;
+import id.naturalsmp.naturalinteraction.utils.PluginConfig;
 import net.citizensnpcs.api.event.NPCRightClickEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -151,16 +152,18 @@ public class InteractionListener implements Listener {
         }
 
         // Block ALL commands for players who haven't completed prologue
+        String prologueId = PluginConfig.getPrologueInteractionId(plugin);
         if (!plugin.getInteractionManager().getCompletionTracker()
-                .hasCompleted(player.getUniqueId(), "prologue")) {
+                .hasCompleted(player.getUniqueId(), prologueId)) {
             event.setCancelled(true);
             player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
                     .toComponent("&cKamu harus menyelesaikan prologue terlebih dahulu!"));
             return;
         }
 
-        // Specific block for quest_sky world
-        if (player.getWorld().getName().equalsIgnoreCase("quest_sky")) {
+        // Block commands in prologue world
+        String prologueWorld = PluginConfig.getPrologueWorld(plugin);
+        if (player.getWorld().getName().equalsIgnoreCase(prologueWorld)) {
             event.setCancelled(true);
             player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils
                     .toComponent("&cKamu belum bisa menggunakan command di dunia ini. Selesaikan prologue-nya!"));
