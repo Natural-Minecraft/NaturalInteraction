@@ -21,17 +21,27 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.util.List;
 
 /**
- * Renders all visual output during a dialogue session:
- *  - Typewriter effect on ActionBar
- *  - TextDisplay hologram above NPC head
- *  - Hotbar option items with cycle-and-confirm selection
+ * Renders dialogue using a TypewriterMC-style CHAT display.
  *
- * Selection model (TypewriterMC-style):
- *  - Right-click / Scroll     → cycle through options
- *  - Left-click / "F" key     → confirm highlighted option
- *  - Hotbar slots 1–N         → direct jump to option index (infinite scroll wrap)
+ * How it works:
+ *  1. Every 3 ticks → reveal next word (typewriter effect)
+ *  2. Every 3 ticks (during typewriter) + every 20 ticks (after done):
+ *       re-send the entire chat dialogue box, pushing other players'
+ *       chat messages up and off screen.
+ *
+ * Display layers:
+ *  - CHAT        → main dialogue box (text + options)
+ *  - ACTION BAR  → control hints ("Klik Kanan untuk pilih | Attack untuk konfirmasi")
+ *  - BOSS BAR    → handled by TimerController
+ *  - HOLOGRAM    → NPC name tag above head (optional, minimal)
  */
 public class DialogueRenderer {
+
+    // Number of blank lines sent before the dialogue box to "clear" chat
+    private static final int CHAT_CLEAR_LINES = 10;
+
+    // Box width in characters (for the separator line)
+    private static final String SEPARATOR = "&8&m                                                  ";
 
     private final NaturalInteraction plugin;
     private final Player player;
@@ -47,10 +57,10 @@ public class DialogueRenderer {
     private int selectedOptionIndex = 0;
     private boolean displayingOptions = false;
 
-    // ─── Active tasks & entity ────────────────────────────────────────────────
+    // ─── Tasks & entity ───────────────────────────────────────────────────────
     private BukkitRunnable typewriterTask;
-    private BukkitRunnable actionBarTask;
-    private TextDisplay mainTextDisplay;
+    private BukkitRunnable refreshTask;
+    private TextDisplay npcNameDisplay; // Minimal hologram: NPC name only
 
     public DialogueRenderer(NaturalInteraction plugin, Player player, Interaction interaction) {
         this.plugin = plugin;
@@ -58,27 +68,29 @@ public class DialogueRenderer {
         this.interaction = interaction;
     }
 
-    // ─── Hologram ─────────────────────────────────────────────────────────────
+    // ─── Hologram (NPC name tag only) ─────────────────────────────────────────
 
     public void initHologram(Location npcBase) {
         clearHologram();
         if (npcBase == null) return;
-        Location loc = npcBase.clone().add(0, 2.8, 0);
-        mainTextDisplay = loc.getWorld().spawn(loc, TextDisplay.class, td -> {
+        Location loc = npcBase.clone().add(0, 2.4, 0);
+        String displayName = buildNpcDisplayName();
+        npcNameDisplay = loc.getWorld().spawn(loc, TextDisplay.class, td -> {
             td.setBillboard(Display.Billboard.CENTER);
             td.setPersistent(false);
-            td.setViewRange(15);
-            td.setBackgroundColor(Color.fromARGB(160, 0, 0, 0));
+            td.setViewRange(12);
+            td.setBackgroundColor(Color.fromARGB(180, 0, 0, 0));
             td.setAlignment(TextDisplay.TextAlignment.CENTER);
+            td.text(ChatUtils.toComponent("&6&l✦ &e" + displayName));
         });
     }
 
     public void clearHologram() {
-        if (mainTextDisplay != null && mainTextDisplay.isValid()) mainTextDisplay.remove();
-        mainTextDisplay = null;
+        if (npcNameDisplay != null && npcNameDisplay.isValid()) npcNameDisplay.remove();
+        npcNameDisplay = null;
     }
 
-    // ─── Typewriter ───────────────────────────────────────────────────────────
+    // ─── Typewriter + Chat Streaming ──────────────────────────────────────────
 
     public void startTypewriter(String rawText, List<Option> options) {
         this.currentOptions = options != null ? options : List.of();
@@ -88,10 +100,9 @@ public class DialogueRenderer {
         this.revealedWords = 0;
         this.typewriterDone = false;
 
-        String unicode = interaction.getDialogueUnicode();
-        String prefix = unicode.isEmpty() ? "" : unicode + " ";
         int totalWords = stripColors(fullDialogueText).split(" ").length;
 
+        // Typewriter: reveal words + re-render chat every 3 ticks
         typewriterTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -102,42 +113,42 @@ public class DialogueRenderer {
                     typewriterDone = true;
                     if (!displayingOptions) showOptions();
                     cancel();
+                    startRefreshTask(); // Hand off to slower refresh task
                 }
-                String revealed = getRevealedText(fullDialogueText, revealedWords);
-                String padding = " ".repeat(Math.max(0,
-                        stripColors(fullDialogueText).length() - stripColors(revealed).length()));
-                player.sendActionBar(buildActionBar(unicode, prefix, revealed, padding));
-                updateHologram(revealed);
+                renderChat();
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
             }
         };
         typewriterTask.runTaskTimer(plugin, 0L, 3L);
-
-        actionBarTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!player.isOnline()) { cancel(); return; }
-                if (!typewriterDone) return;
-                String revealed = getRevealedText(fullDialogueText, revealedWords);
-                String padding = " ".repeat(Math.max(0,
-                        stripColors(fullDialogueText).length() - stripColors(revealed).length()));
-                player.sendActionBar(buildActionBar(unicode, prefix, revealed, padding));
-                updateHologram(revealed);
-            }
-        };
-        actionBarTask.runTaskTimer(plugin, 0L, 20L);
     }
 
+    /**
+     * Instantly complete the typewriter (first Shift press).
+     */
     public void completeInstantly() {
         typewriterDone = true;
         revealedWords = stripColors(fullDialogueText).split(" ").length;
         cancelTypewriter();
         if (!displayingOptions) showOptions();
-        String unicode = interaction.getDialogueUnicode();
-        String prefix = unicode.isEmpty() ? "" : unicode + " ";
-        player.sendActionBar(buildActionBar(unicode, prefix, fullDialogueText, ""));
-        updateHologram(fullDialogueText);
+        renderChat();
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3f, 1.8f);
+        startRefreshTask();
+    }
+
+    /**
+     * After typewriter is done, keep re-sending the chat box every 20 ticks (1 second)
+     * so other players' messages don't bury the dialogue.
+     */
+    private void startRefreshTask() {
+        if (refreshTask != null && !refreshTask.isCancelled()) refreshTask.cancel();
+        refreshTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) { cancel(); return; }
+                renderChat();
+            }
+        };
+        refreshTask.runTaskTimer(plugin, 20L, 20L); // Every 1 second
     }
 
     public void cancelTypewriter() {
@@ -146,7 +157,7 @@ public class DialogueRenderer {
 
     public void cancelAll() {
         cancelTypewriter();
-        if (actionBarTask != null && !actionBarTask.isCancelled()) actionBarTask.cancel();
+        if (refreshTask != null && !refreshTask.isCancelled()) refreshTask.cancel();
     }
 
     public void clearActionBar() {
@@ -155,57 +166,41 @@ public class DialogueRenderer {
 
     // ─── Option Selection — Cycle & Confirm ───────────────────────────────────
 
-    /**
-     * Show options in hotbar. Called automatically when typewriter completes.
-     * Each slot corresponds to an option index (infinite scroll wraps).
-     */
     public void showOptions() {
         if (currentOptions.isEmpty()) return;
         player.getInventory().setHeldItemSlot(0);
         displayingOptions = true;
         selectedOptionIndex = 0;
         renderHotbar();
+        renderChat(); // Re-render chat to show options in dialogue box
     }
 
-    /**
-     * Cycle to the next option (Right-click / Scroll Down).
-     * Wraps around infinitely.
-     */
     public void cycleNext() {
         if (!displayingOptions || currentOptions.isEmpty()) return;
         selectedOptionIndex = (selectedOptionIndex + 1) % currentOptions.size();
         renderHotbar();
+        renderChat(); // Re-render chat immediately to reflect new highlight
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.5f);
     }
 
-    /**
-     * Cycle to the previous option (Scroll Up).
-     * Wraps around infinitely.
-     */
     public void cyclePrev() {
         if (!displayingOptions || currentOptions.isEmpty()) return;
         selectedOptionIndex = (selectedOptionIndex - 1 + currentOptions.size()) % currentOptions.size();
         renderHotbar();
+        renderChat();
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.5f);
     }
 
-    /**
-     * Jump directly to a specific option index via hotbar slot.
-     * Uses modulo so it wraps when options > 9.
-     */
     public void jumpToSlot(int slot) {
         if (!displayingOptions || currentOptions.isEmpty()) return;
         int target = slot % currentOptions.size();
         if (target == selectedOptionIndex) return;
         selectedOptionIndex = target;
         renderHotbar();
+        renderChat();
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.4f, 1.5f);
     }
 
-    /**
-     * Confirm the currently highlighted option.
-     * Returns the selected Option, or null if none / not yet displaying.
-     */
     public Option confirmSelected() {
         if (!displayingOptions || currentOptions.isEmpty()) return null;
         if (selectedOptionIndex < 0 || selectedOptionIndex >= currentOptions.size()) return null;
@@ -220,15 +215,69 @@ public class DialogueRenderer {
     public int getSelectedOptionIndex()  { return selectedOptionIndex; }
     public List<Option> getCurrentOptions() { return currentOptions; }
 
-    // ─── Private Hotbar Rendering ─────────────────────────────────────────────
+    // ─── Core Chat Renderer ───────────────────────────────────────────────────
 
     /**
-     * Render all options into the hotbar.
+     * Sends the entire dialogue box to the player's chat.
      *
-     * Visual:
-     *  - Selected → LIME_DYE with enchant glow, gold name, "▶ Option Text"
-     *  - Others   → GRAY_DYE, gray name, "  Option Text"
+     * Format:
+     * [blank lines × CHAT_CLEAR_LINES]
+     * ─────────────────────────────────────────
+     * ✦ NPC Name
+     *
+     *   "Revealed dialogue text here, word by word..."
+     *
+     *   ▶ Option 1 (highlighted)
+     *     Option 2
+     *     Option 3
+     *
+     * ─────────────────────────────────────────
+     *   ▶ 1/3 | Klik Kanan/Scroll pilih  |  Attack/"F" konfirmasi
      */
+    private void renderChat() {
+        // 1. Push other chat up with blank lines
+        for (int i = 0; i < CHAT_CLEAR_LINES; i++) {
+            player.sendMessage(Component.empty());
+        }
+
+        // 2. Top separator
+        player.sendMessage(ChatUtils.toComponent(SEPARATOR));
+
+        // 3. NPC name header
+        String npcName = buildNpcDisplayName();
+        player.sendMessage(ChatUtils.toComponent("  &6&l✦ &e&l" + npcName));
+        player.sendMessage(Component.empty());
+
+        // 4. Dialogue text (revealed so far)
+        String revealed = getRevealedText(fullDialogueText, revealedWords);
+        // Word-wrap at ~45 chars
+        for (String line : wordWrap(revealed, 45)) {
+            player.sendMessage(ChatUtils.toComponent("  &f" + line));
+        }
+
+        // 5. Options (if displaying)
+        if (typewriterDone && !currentOptions.isEmpty()) {
+            player.sendMessage(Component.empty());
+            for (int i = 0; i < currentOptions.size(); i++) {
+                boolean selected = (i == selectedOptionIndex);
+                String prefix = selected ? "&6&l▶ &e" : "&8  &7";
+                String suffix = selected ? " &8&o◀" : "";
+                player.sendMessage(ChatUtils.toComponent("  " + prefix
+                        + (i + 1) + ". " + currentOptions.get(i).getText() + suffix));
+            }
+        }
+
+        player.sendMessage(Component.empty());
+
+        // 6. Bottom separator
+        player.sendMessage(ChatUtils.toComponent(SEPARATOR));
+
+        // 7. Control hint in ActionBar (always visible, not buried in chat)
+        player.sendActionBar(buildControlHint());
+    }
+
+    // ─── Private Hotbar Rendering ─────────────────────────────────────────────
+
     private void renderHotbar() {
         player.getInventory().clear();
         for (int i = 0; i < currentOptions.size(); i++) {
@@ -239,65 +288,60 @@ public class DialogueRenderer {
             ItemMeta meta = item.getItemMeta();
 
             if (selected) {
-                String name = "&#FFAA00&l▶ &e" + opt.getText();
-                meta.displayName(ChatUtils.toComponent(name));
+                meta.displayName(ChatUtils.toComponent("&#FFAA00&l▶ &e" + (i + 1) + ". " + opt.getText()));
                 meta.addEnchant(Enchantment.UNBREAKING, 1, true);
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             } else {
-                String name = "&8  " + opt.getText();
-                meta.displayName(ChatUtils.toComponent(name));
+                meta.displayName(ChatUtils.toComponent("&8  &7" + (i + 1) + ". " + opt.getText()));
             }
-
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             item.setItemMeta(meta);
 
-            // Wrap slot index (only 9 slots in hotbar)
-            int slot = i % 9;
-            player.getInventory().setItem(slot, item);
+            player.getInventory().setItem(i % 9, item);
         }
-
-        // Update hotbar held slot to visually follow selected index
         player.getInventory().setHeldItemSlot(selectedOptionIndex % 9);
-
-        // Update hologram to show current highlighted option
-        updateHologram(getRevealedText(fullDialogueText, revealedWords));
     }
 
     // ─── Private Helpers ──────────────────────────────────────────────────────
 
-    private void updateHologram(String revealedText) {
-        if (mainTextDisplay == null || !mainTextDisplay.isValid()) return;
-        StringBuilder sb = new StringBuilder(revealedText);
-        if (typewriterDone && !currentOptions.isEmpty()) {
-            sb.append("\n");
-            for (int i = 0; i < currentOptions.size(); i++) {
-                boolean selected = (i == selectedOptionIndex);
-                if (selected) {
-                    sb.append("\n&#FFAA00&l▶ ").append(i + 1).append(". &e").append(currentOptions.get(i).getText());
-                } else {
-                    sb.append("\n&8  ").append(i + 1).append(". &7").append(currentOptions.get(i).getText());
-                }
-            }
+    private Component buildControlHint() {
+        String hint;
+        if (displayingOptions && !currentOptions.isEmpty()) {
+            hint = "&#FFD700▶ &e" + (selectedOptionIndex + 1) + "/" + currentOptions.size()
+                    + "  &8│  &fKlik Kanan&8/&fScroll &7pilih  "
+                    + "&8│  &fAttack&8/&f\"F\" &7konfirmasi";
+        } else if (typewriterDone) {
+            hint = "&#FF3333➤ &cShift &funtuk lanjut";
+        } else {
+            hint = "&#FF3333➤ &cShift &funtuk skip teks";
         }
-        mainTextDisplay.text(ChatUtils.toComponent(sb.toString().trim()));
+        return ChatUtils.toComponent(hint);
     }
 
-    private Component buildActionBar(String unicode, String prefix, String revealed, String padding) {
-        if (unicode == null || unicode.trim().isEmpty()) {
-            String instruction;
-            if (displayingOptions && !currentOptions.isEmpty()) {
-                // Show confirm instructions
-                instruction = "&#FFD700▶ &e" + (selectedOptionIndex + 1) + "/" + currentOptions.size()
-                        + " &8| &fKlik Kanan&8/&fScroll &7untuk pilih   "
-                        + "&8| &fAttack&8/&f\"F\" &7untuk konfirmasi";
-            } else if (typewriterDone) {
-                instruction = "&#FF3333➤ &cTekan Shift &funtuk skip / lanjut";
-            } else {
-                instruction = "&#FF3333➤ &cTekan Shift &funtuk skip teks";
+    private String buildNpcDisplayName() {
+        String raw = interaction.getId().replace("_", " ");
+        return raw.isEmpty() ? "NPC" : Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+    }
+
+    /** Simple word-wrap: split revealed text into lines of max {@code maxLen} chars (stripped). */
+    private java.util.List<String> wordWrap(String text, int maxLen) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        String[] words = text.split(" ");
+        StringBuilder line = new StringBuilder();
+        String activeColor = "";
+
+        for (String word : words) {
+            String stripped = stripColors(word);
+            if (stripColors(line.toString()).length() + stripped.length() + 1 > maxLen && !line.isEmpty()) {
+                lines.add(line.toString());
+                line = new StringBuilder(activeColor);
             }
-            return ChatUtils.toComponent(instruction);
+            if (!line.isEmpty()) line.append(" ");
+            line.append(word);
+            activeColor = getActiveColors(line.toString());
         }
-        return ChatUtils.toComponent(prefix + revealed + padding);
+        if (!line.isEmpty()) lines.add(line.toString());
+        return lines;
     }
 
     private String getRevealedText(String coloredText, int wordCount) {
