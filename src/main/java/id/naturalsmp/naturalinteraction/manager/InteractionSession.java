@@ -199,6 +199,11 @@ public class InteractionSession {
         playNode(interaction.getNode(chosen.getTargetNodeId()));
     }
 
+    /** Check if player is currently viewing option choices. */
+    public boolean isDisplayingOptions() {
+        return dialogueRenderer.isDisplayingOptions();
+    }
+
     // ─── Session End ──────────────────────────────────────────────────────────
 
     /**

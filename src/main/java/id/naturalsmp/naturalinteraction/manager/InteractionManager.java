@@ -221,7 +221,7 @@ public class InteractionManager {
         InteractionSession session = new InteractionSession(plugin, player, interaction);
         activeSessions.put(player.getUniqueId(), session);
 
-        boolean hasCompleted = completionTracker.hasCompleted(player.getUniqueId(), interactionId);
+        boolean hasCompleted = plugin.getFactsManager().hasCompleted(player.getUniqueId(), interactionId);
         if (hasCompleted
                 && interaction.getPostCompletionMode() == PostCompletionMode.ALTERNATE_NODES
                 && interaction.getPostCompletionRootNodeId() != null) {
