@@ -1,20 +1,29 @@
 name: NaturalInteraction
-version: 1.3.0
+version: 2.0.0
 main: id.naturalsmp.naturalinteraction.NaturalInteraction
 api-version: 1.21
 authors: [NaturalSMP]
-description: Advanced RPG Story and NPC Interaction System
+description: Advanced RPG Interaction, Dialogue, Quest, and Cinematic System
 depend: [Citizens, NaturalCore, ProtocolLib]
 softdepend: [PlaceholderAPI, NaturalDungeon, NaturalPass, ItemsAdder]
 
 commands:
-  interaction:
-    description: Main command for interactions
-    usage: /interaction <subcommand>
-    aliases: [inter, ni]
+  ni:
+    description: NaturalInteraction main command
+    usage: /ni <subcommand> [args]
+    aliases: [interaction, inter]
+    permission: naturalsmp.ni
   story:
     description: View your story progress
     usage: /story
   sidequest:
     description: View your active sidequests
     usage: /sidequest
+
+permissions:
+  naturalsmp.admin:
+    description: Full access to all /ni admin commands
+    default: op
+  naturalsmp.ni:
+    description: Access to basic /ni commands
+    default: true

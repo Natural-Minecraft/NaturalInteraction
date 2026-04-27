@@ -10,9 +10,7 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class InteractionManager {
 
@@ -20,11 +18,10 @@ public class InteractionManager {
     private final Map<String, Interaction> interactions = new HashMap<>();
     private final Map<UUID, InteractionSession> activeSessions = new HashMap<>();
     private final File interactionsFolder;
+    private final File chaptersFolder;
     private final File cooldownsFile;
 
     private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
-    private final CompletionTracker completionTracker;
-    private final TagTracker tagTracker;
 
     private final com.google.gson.Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
 
@@ -34,12 +31,10 @@ public class InteractionManager {
     public InteractionManager(NaturalInteraction plugin) {
         this.plugin = plugin;
         this.interactionsFolder = new File(plugin.getDataFolder(), "interactions");
-        if (!interactionsFolder.exists()) {
-            interactionsFolder.mkdirs();
-        }
+        if (!interactionsFolder.exists()) interactionsFolder.mkdirs();
+        this.chaptersFolder = new File(plugin.getDataFolder(), "chapters");
+        if (!chaptersFolder.exists()) chaptersFolder.mkdirs();
         this.cooldownsFile = new File(plugin.getDataFolder(), "cooldowns.json");
-        this.completionTracker = new CompletionTracker(plugin);
-        this.tagTracker = new TagTracker(plugin);
         loadInteractions();
         loadCooldowns();
     }
@@ -48,23 +43,59 @@ public class InteractionManager {
 
     public void loadInteractions() {
         interactions.clear();
-        if (!interactionsFolder.exists()) return;
+        // Load from legacy flat interactions/ folder
+        loadFromFolder(interactionsFolder);
+        // Load from chapters/ folder (recursive)
+        loadFromFolderRecursive(chaptersFolder);
+        plugin.getLogger().info("Loaded " + interactions.size() + " interactions.");
+    }
 
-        File[] files = interactionsFolder.listFiles((dir, name) -> name.endsWith(".json"));
+    private void loadFromFolder(File folder) {
+        if (!folder.exists()) return;
+        File[] files = folder.listFiles((dir, name) -> name.endsWith(".json"));
         if (files == null) return;
-
         for (File file : files) {
-            try (FileReader reader = new FileReader(file)) {
-                Interaction interaction = gson.fromJson(reader, Interaction.class);
-                if (interaction != null) {
-                    interactions.put(interaction.getId(), interaction);
-                }
-            } catch (Exception e) {
-                plugin.getLogger().severe("Failed to load interaction from " + file.getName());
-                e.printStackTrace();
+            loadSingleFile(file);
+        }
+    }
+
+    private void loadFromFolderRecursive(File folder) {
+        if (!folder.exists()) return;
+        File[] entries = folder.listFiles();
+        if (entries == null) return;
+        for (File entry : entries) {
+            if (entry.isDirectory()) {
+                loadFromFolderRecursive(entry);
+            } else if (entry.getName().endsWith(".json")) {
+                loadSingleFile(entry);
             }
         }
-        plugin.getLogger().info("Loaded " + interactions.size() + " interactions.");
+    }
+
+    private void loadSingleFile(File file) {
+        try (FileReader reader = new FileReader(file)) {
+            Interaction interaction = gson.fromJson(reader, Interaction.class);
+            if (interaction != null) {
+                // Auto-derive chapter from relative path inside chapters/
+                if (interaction.getChapter().isEmpty()) {
+                    String chapterPath = deriveChapterPath(file);
+                    if (!chapterPath.isEmpty()) interaction.setChapter(chapterPath);
+                }
+                interactions.put(interaction.getId(), interaction);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to load interaction from " + file.getName() + ": " + e.getMessage());
+        }
+    }
+
+    /** Derives chapter path from a file's path relative to chapters/ folder. */
+    private String deriveChapterPath(File file) {
+        try {
+            String relative = chaptersFolder.toPath().relativize(file.getParentFile().toPath()).toString();
+            return relative.replace(File.separator, ".");
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public void saveInteraction(Interaction interaction) {
@@ -141,12 +172,25 @@ public class InteractionManager {
         return interactions.keySet();
     }
 
+    /** @deprecated Use {@link id.naturalsmp.naturalinteraction.facts.FactsManager} directly. */
+    @Deprecated
     public CompletionTracker getCompletionTracker() {
-        return completionTracker;
+        // Shim: return a wrapper that delegates to FactsManager
+        return new CompletionTracker(plugin) {
+            @Override public boolean hasCompleted(UUID p, String id) { return plugin.getFactsManager().hasCompleted(p, id); }
+            @Override public void markCompleted(UUID p, String id)   { plugin.getFactsManager().markCompleted(p, id); }
+            @Override public void resetCompletion(UUID p, String id) { plugin.getFactsManager().resetCompletion(p, id); }
+        };
     }
 
+    /** @deprecated Use {@link id.naturalsmp.naturalinteraction.facts.FactsManager} directly. */
+    @Deprecated
     public TagTracker getTagTracker() {
-        return tagTracker;
+        return new TagTracker(plugin) {
+            @Override public boolean hasTag(UUID p, String tag) { return plugin.getFactsManager().hasTag(p, tag); }
+            @Override public void addTag(UUID p, String tag)    { plugin.getFactsManager().addTag(p, tag); }
+            @Override public void removeTag(UUID p, String tag) { plugin.getFactsManager().removeTag(p, tag); }
+        };
     }
 
     // ─── Session Management ────────────────────────────────────────────────────

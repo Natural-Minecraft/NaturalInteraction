@@ -1,11 +1,16 @@
 package id.naturalsmp.naturalinteraction.utils;
 
+import id.naturalsmp.naturalinteraction.NaturalInteraction;
+import id.naturalsmp.naturalinteraction.facts.FactsManager;
 import id.naturalsmp.naturalinteraction.model.Action;
 import id.naturalsmp.naturalinteraction.model.ActionType;
+import id.naturalsmp.naturalinteraction.session.InventorySnapshot;
+import id.naturalsmp.naturalinteraction.manager.InteractionSession;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import net.kyori.adventure.text.Component;
@@ -13,281 +18,270 @@ import net.kyori.adventure.title.Title;
 
 import java.time.Duration;
 
+/**
+ * Executes a single {@link Action} for a player during a dialogue node.
+ *
+ * Returns a node ID (String) if the action causes a node jump (JUMP_IF_*),
+ * or null to continue normal flow.
+ *
+ * Facts actions (SET_FACT, ADD_FACT, JUMP_IF_FACT, etc.) use the new
+ * unified {@link FactsManager}. Legacy tag actions (ADD_TAG, REMOVE_TAG,
+ * JUMP_IF_TAG, JUMP_IF_NOT_TAG) are mapped to Facts equivalents.
+ */
 public class ActionExecutor {
 
-    public static String execute(Player player, Action action, id.naturalsmp.naturalinteraction.NaturalInteraction plugin) {
-        if (action == null || action.getType() == null)
-            return null;
+    public static String execute(Player player, Action action, NaturalInteraction plugin) {
+        if (action == null || action.getType() == null) return null;
 
-        String value = action.getValue();
-        if (value == null)
-            value = "";
+        String value = action.getValue() != null ? action.getValue() : "";
+        FactsManager facts = plugin != null ? plugin.getFactsManager() : null;
 
         try {
             switch (action.getType()) {
-                case TELEPORT:
-                    String[] parts = value.split(",");
-                    if (parts.length >= 4) {
-                        double x = Double.parseDouble(parts[0]);
-                        double y = Double.parseDouble(parts[1]);
-                        double z = Double.parseDouble(parts[2]);
-                        String world = parts[3];
-                        float yaw = parts.length > 4 ? Float.parseFloat(parts[4]) : player.getLocation().getYaw();
-                        float pitch = parts.length > 5 ? Float.parseFloat(parts[5]) : player.getLocation().getPitch();
-                        if (Bukkit.getWorld(world) != null) {
-                            player.teleport(new Location(Bukkit.getWorld(world), x, y, z, yaw, pitch));
-                        }
-                    }
-                    break;
-                case COMMAND:
-                    String cmd = value.replace("%player%", player.getName());
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-                    break;
-                case EFFECT:
-                    String[] effParts = value.split(",");
-                    if (effParts.length >= 2) {
-                        PotionEffectType type = PotionEffectType.getByName(effParts[0].toUpperCase());
-                        int duration = Integer.parseInt(effParts[1]) * 20;
-                        int amplifier = effParts.length > 2 ? Integer.parseInt(effParts[2]) : 0;
-                        if (type != null) {
-                            player.addPotionEffect(new PotionEffect(type, duration, amplifier));
-                        }
-                    }
-                    break;
-                case SOUND:
-                    String[] soundParts = value.split(",");
-                    if (soundParts.length >= 1) {
-                        Sound sound = Sound.valueOf(soundParts[0].toUpperCase());
-                        float vol = soundParts.length > 1 ? Float.parseFloat(soundParts[1]) : 1.0f;
-                        float pitchVal = soundParts.length > 2 ? Float.parseFloat(soundParts[2]) : 1.0f;
-                        player.playSound(player.getLocation(), sound, vol, pitchVal);
-                    }
-                    break;
-                case TITLE:
-                    String[] titleParts = value.split(";");
-                    String titleText = titleParts[0].replace("%player%", player.getName());
-                    String subtitleText = titleParts.length > 1 ? titleParts[1].replace("%player%", player.getName()) : "";
 
-                    Title title = Title.title(
-                            ChatUtils.toComponent(titleText),
-                            ChatUtils.toComponent(subtitleText),
-                            Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3000),
-                                    Duration.ofMillis(1000)));
-                    player.showTitle(title);
-                    break;
-                case MESSAGE:
-                    player.sendMessage(ChatUtils.toComponent(value.replace("%player%", player.getName())));
-                    break;
-                case ZOOM:
+                // ─── Movement & World ─────────────────────────────────────────
+                case TELEPORT -> {
+                    String[] p = value.split(",");
+                    if (p.length >= 4 && Bukkit.getWorld(p[3]) != null) {
+                        double x = Double.parseDouble(p[0]);
+                        double y = Double.parseDouble(p[1]);
+                        double z = Double.parseDouble(p[2]);
+                        float yaw   = p.length > 4 ? Float.parseFloat(p[4]) : player.getLocation().getYaw();
+                        float pitch = p.length > 5 ? Float.parseFloat(p[5]) : player.getLocation().getPitch();
+                        player.teleport(new Location(Bukkit.getWorld(p[3]), x, y, z, yaw, pitch));
+                    }
+                }
+                case COMMAND -> {
+                    String cmd = value.replace("%player%", player.getName())
+                                     .replace("%player_name%", player.getName());
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                }
+                case EFFECT -> {
+                    String[] p = value.split(",");
+                    if (p.length >= 2) {
+                        PotionEffectType type = PotionEffectType.getByName(p[0].toUpperCase());
+                        int duration = Integer.parseInt(p[1]) * 20;
+                        int amp = p.length > 2 ? Integer.parseInt(p[2]) : 0;
+                        if (type != null) player.addPotionEffect(new PotionEffect(type, duration, amp));
+                    }
+                }
+                case SOUND -> {
+                    String[] p = value.split(",");
+                    Sound sound = Sound.valueOf(p[0].toUpperCase());
+                    float vol   = p.length > 1 ? Float.parseFloat(p[1]) : 1.0f;
+                    float pitch = p.length > 2 ? Float.parseFloat(p[2]) : 1.0f;
+                    player.playSound(player.getLocation(), sound, vol, pitch);
+                }
+                case TITLE -> {
+                    String[] p = value.split(";", 2);
+                    String t = p[0].replace("%player%", player.getName());
+                    String s = p.length > 1 ? p[1].replace("%player%", player.getName()) : "";
+                    player.showTitle(Title.title(
+                            ChatUtils.toComponent(t), ChatUtils.toComponent(s),
+                            Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3000), Duration.ofMillis(1000))));
+                }
+                case MESSAGE  -> player.sendMessage(ChatUtils.toComponent(value.replace("%player%", player.getName())));
+                case ACTIONBAR -> player.sendActionBar(ChatUtils.toComponent(value.replace("%player%", player.getName())));
+                case SCREENEFFECT -> {
+                    String cmd = "screeneffect " + value.replace("%player%", player.getName());
+                    if (!cmd.contains(player.getName())) cmd += " " + player.getName();
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                }
+                case ZOOM -> {
                     if ("true".equalsIgnoreCase(value)) {
                         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 99999, 0, false, false));
                     } else {
                         player.removePotionEffect(PotionEffectType.SLOWNESS);
                     }
-                    break;
-                case ITEM:
-                    String[] itemParts = value.split(",");
-                    if (itemParts.length >= 1) {
-                        int amount = itemParts.length > 1 ? Integer.parseInt(itemParts[1]) : 1;
-                        org.bukkit.inventory.ItemStack itemToGive = null;
-
-                        // Format check for ItemsAdder
-                        if (itemParts[0].contains(":")) {
-                            dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.getInstance(itemParts[0]);
-                            if (customStack != null) {
-                                itemToGive = customStack.getItemStack();
-                                itemToGive.setAmount(amount);
-                            }
-                        } else {
-                            // Vanilla fallback
-                            org.bukkit.Material mat = org.bukkit.Material.matchMaterial(itemParts[0].toUpperCase());
-                            if (mat != null) {
-                                itemToGive = new org.bukkit.inventory.ItemStack(mat, amount);
-                                if (itemParts.length > 2) {
-                                    org.bukkit.inventory.meta.ItemMeta meta = itemToGive.getItemMeta();
-                                    if (meta != null) {
-                                        meta.displayName(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(itemParts[2]));
-                                        if (mat == org.bukkit.Material.FILLED_MAP && meta instanceof org.bukkit.inventory.meta.MapMeta) {
-                                            org.bukkit.inventory.meta.MapMeta mapMeta = (org.bukkit.inventory.meta.MapMeta) meta;
-                                            org.bukkit.map.MapView view = org.bukkit.Bukkit.createMap(player.getWorld());
-                                            mapMeta.setMapView(view);
-                                        }
-                                        itemToGive.setItemMeta(meta);
-                                    }
-                                }
-                            }
-                        }
-
-                        if (itemToGive != null) {
-                            id.naturalsmp.naturalinteraction.manager.InteractionSession isession = plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
-                            if (isession != null && isession.getOriginalInventory() != null) {
-                                isession.addOriginalItem(itemToGive);
-                            } else {
-                                player.getInventory().addItem(itemToGive);
-                            }
-                        }
-                    }
-                    break;
-                case ACTIONBAR:
-                    player.sendActionBar(id.naturalsmp.naturalinteraction.utils.ChatUtils
-                            .toComponent(value.replace("%player%", player.getName())));
-                    break;
-                case SCREENEFFECT:
-                    // value: "effect color fadein stay fadeout freeze|nofreeze"
-                    // Dispatches: /screeneffect <value> <player>
-                    String screenCmd = "screeneffect " + value.replace("%player%", player.getName());
-                    if (!screenCmd.contains(player.getName())) {
-                        screenCmd += " " + player.getName();
-                    }
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), screenCmd);
-                    break;
-                case INVISIBLE:
+                }
+                case INVISIBLE -> {
                     if ("true".equalsIgnoreCase(value)) {
-                        // Make player invisible
-                        player.addPotionEffect(new PotionEffect(
-                                PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false, false));
-                        // Hide armor visually by storing and clearing
+                        player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false, false));
                         player.setInvisible(true);
                     } else {
-                        // Remove invisibility
                         player.removePotionEffect(PotionEffectType.INVISIBILITY);
                         player.setInvisible(false);
                     }
-                    break;
-                case ADD_TAG:
-                    if (plugin != null) {
-                        plugin.getInteractionManager().getTagTracker().addTag(player.getUniqueId(), value);
-                    }
-                    break;
-                case REMOVE_TAG:
-                    if (plugin != null) {
-                        plugin.getInteractionManager().getTagTracker().removeTag(player.getUniqueId(), value);
-                    }
-                    break;
-                case JUMP_IF_TAG:
-                    // value: "tag_name,target_node_id"
-                    if (plugin != null) {
-                        String[] partsJump = value.split(",");
-                        if (partsJump.length == 2) {
-                            if (plugin.getInteractionManager().getTagTracker().hasTag(player.getUniqueId(), partsJump[0])) {
-                                return partsJump[1];
-                            }
+                }
+
+                // ─── Items ────────────────────────────────────────────────────
+                case ITEM -> {
+                    String[] p = value.split(",");
+                    int amount = p.length > 1 ? Integer.parseInt(p[1]) : 1;
+                    ItemStack item = resolveItem(p[0], amount, p.length > 2 ? p[2] : null);
+                    if (item != null) giveItem(player, item, plugin);
+                }
+                case TAKE_ITEM -> {
+                    String[] p = value.split(",");
+                    if (p.length >= 2) takeItem(player, p[0], Integer.parseInt(p[1]), plugin);
+                }
+                case JUMP_IF_ITEM -> {
+                    String[] p = value.split(",");
+                    if (p.length == 3 && hasItem(player, p[0], Integer.parseInt(p[1]), plugin)) return p[2];
+                }
+                case JUMP_IF_NOT_ITEM -> {
+                    String[] p = value.split(",");
+                    if (p.length == 3 && !hasItem(player, p[0], Integer.parseInt(p[1]), plugin)) return p[2];
+                }
+
+                // ─── Facts ────────────────────────────────────────────────────
+                case SET_FACT -> {
+                    // value: "factKey,value"
+                    if (facts == null) break;
+                    int idx = value.indexOf(',');
+                    if (idx > 0) facts.setString(player.getUniqueId(), value.substring(0, idx), value.substring(idx + 1));
+                }
+                case ADD_FACT -> {
+                    // value: "factKey,delta"
+                    if (facts == null) break;
+                    String[] p = value.split(",", 2);
+                    if (p.length == 2) {
+                        try { facts.addInt(player.getUniqueId(), p[0], Integer.parseInt(p[1])); }
+                        catch (NumberFormatException e) {
+                            try { facts.setFloat(player.getUniqueId(), p[0],
+                                    facts.getFloat(player.getUniqueId(), p[0], 0) + Float.parseFloat(p[1])); }
+                            catch (NumberFormatException ignored) {}
                         }
                     }
-                    break;
-                case JUMP_IF_NOT_TAG:
-                    // value: "tag_name,target_node_id"
-                    if (plugin != null) {
-                        String[] partsJumpN = value.split(",");
-                        if (partsJumpN.length == 2) {
-                            if (!plugin.getInteractionManager().getTagTracker().hasTag(player.getUniqueId(), partsJumpN[0])) {
-                                return partsJumpN[1];
-                            }
-                        }
+                }
+                case REMOVE_FACT -> {
+                    if (facts != null) facts.remove(player.getUniqueId(), value);
+                }
+                case JUMP_IF_FACT -> {
+                    // value: "factKey,expectedValue,targetNodeId"
+                    if (facts == null) break;
+                    String[] p = value.split(",", 3);
+                    if (p.length == 3) {
+                        String actual = facts.getString(player.getUniqueId(), p[0], "");
+                        if (p[1].equalsIgnoreCase(actual)) return p[2];
                     }
-                    break;
-                case TAKE_ITEM:
-                    // value: "material|ia_id,amount"
-                    String[] takeParts = value.split(",");
-                    if (takeParts.length >= 2) {
-                        String itemStr = takeParts[0];
-                        int amount = Integer.parseInt(takeParts[1]);
-                        takePlayerItem(player, itemStr, amount, plugin);
+                }
+                case JUMP_IF_NOT_FACT -> {
+                    // value: "factKey,expectedValue,targetNodeId"
+                    if (facts == null) break;
+                    String[] p = value.split(",", 3);
+                    if (p.length == 3) {
+                        String actual = facts.getString(player.getUniqueId(), p[0], "");
+                        if (!p[1].equalsIgnoreCase(actual)) return p[2];
                     }
-                    break;
-                case JUMP_IF_ITEM:
-                    // value: "material|ia_id,amount,target_node_id"
-                    String[] jiParts = value.split(",");
-                    if (jiParts.length == 3) {
-                        String itemStr = jiParts[0];
-                        int amount = Integer.parseInt(jiParts[1]);
-                        if (hasPlayerItem(player, itemStr, amount, plugin)) {
-                            return jiParts[2];
-                        }
+                }
+                case JUMP_IF_FACT_GT -> {
+                    // value: "factKey,threshold,targetNodeId"
+                    if (facts == null) break;
+                    String[] p = value.split(",", 3);
+                    if (p.length == 3) {
+                        float actual = facts.getFloat(player.getUniqueId(), p[0], 0);
+                        if (actual > Float.parseFloat(p[1])) return p[2];
                     }
-                    break;
-                case JUMP_IF_NOT_ITEM:
-                    // value: "material|ia_id,amount,target_node_id"
-                    String[] jinParts = value.split(",");
-                    if (jinParts.length == 3) {
-                        String itemStr = jinParts[0];
-                        int amount = Integer.parseInt(jinParts[1]);
-                        if (!hasPlayerItem(player, itemStr, amount, plugin)) {
-                            return jinParts[2];
-                        }
+                }
+                case JUMP_IF_FACT_LT -> {
+                    // value: "factKey,threshold,targetNodeId"
+                    if (facts == null) break;
+                    String[] p = value.split(",", 3);
+                    if (p.length == 3) {
+                        float actual = facts.getFloat(player.getUniqueId(), p[0], 0);
+                        if (actual < Float.parseFloat(p[1])) return p[2];
                     }
-                    break;
+                }
+
+                // ─── Legacy Tag (maps to Facts) ───────────────────────────────
+                case ADD_TAG -> {
+                    if (facts != null) facts.addTag(player.getUniqueId(), value);
+                }
+                case REMOVE_TAG -> {
+                    if (facts != null) facts.removeTag(player.getUniqueId(), value);
+                }
+                case JUMP_IF_TAG -> {
+                    if (facts == null) break;
+                    String[] p = value.split(",", 2);
+                    if (p.length == 2 && facts.hasTag(player.getUniqueId(), p[0])) return p[1];
+                }
+                case JUMP_IF_NOT_TAG -> {
+                    if (facts == null) break;
+                    String[] p = value.split(",", 2);
+                    if (p.length == 2 && !facts.hasTag(player.getUniqueId(), p[0])) return p[1];
+                }
             }
         } catch (Exception e) {
-            Bukkit.getLogger().warning("Failed to execute action " + action.getType() + ": " + e.getMessage());
+            Bukkit.getLogger().warning("[NI] Action " + action.getType() + " failed: " + e.getMessage());
         }
         return null;
     }
 
-    private static boolean hasPlayerItem(Player player, String itemString, int amount, id.naturalsmp.naturalinteraction.NaturalInteraction plugin) {
-        id.naturalsmp.naturalinteraction.manager.InteractionSession session = 
-            plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
-            
-        if (session != null && session.getOriginalInventory() != null) {
-            return session.hasOriginalItem(itemString, amount);
+    // ─── Item Helpers ─────────────────────────────────────────────────────────
+
+    private static ItemStack resolveItem(String id, int amount, String displayName) {
+        if (id.contains(":")) {
+            try {
+                dev.lone.itemsadder.api.CustomStack cs = dev.lone.itemsadder.api.CustomStack.getInstance(id);
+                if (cs != null) {
+                    ItemStack item = cs.getItemStack();
+                    item.setAmount(amount);
+                    return item;
+                }
+            } catch (NoClassDefFoundError ignored) {}
         }
+        org.bukkit.Material mat = org.bukkit.Material.matchMaterial(id.toUpperCase());
+        if (mat == null) return null;
+        ItemStack item = new ItemStack(mat, amount);
+        if (displayName != null && item.hasItemMeta()) {
+            var meta = item.getItemMeta();
+            meta.displayName(ChatUtils.toComponent(displayName));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private static void giveItem(Player player, ItemStack item, NaturalInteraction plugin) {
+        InteractionSession session = plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
+        if (session != null) {
+            session.addOriginalItem(item);
+        } else {
+            player.getInventory().addItem(item);
+        }
+    }
+
+    private static boolean hasItem(Player player, String itemString, int amount, NaturalInteraction plugin) {
+        InteractionSession session = plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
+        if (session != null) return session.hasOriginalItem(itemString, amount);
 
         int count = 0;
-        for (org.bukkit.inventory.ItemStack item : player.getInventory().getContents()) {
+        for (ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
-
-            if (itemString.contains(":")) {
-                dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
-                if (customStack != null && customStack.getNamespacedID().equalsIgnoreCase(itemString)) {
-                    count += item.getAmount();
-                }
-            } else {
-                if (item.getType().name().equalsIgnoreCase(itemString)) {
-                    count += item.getAmount();
-                }
-            }
+            if (matchesItem(item, itemString)) count += item.getAmount();
         }
         return count >= amount;
     }
 
-    private static void takePlayerItem(Player player, String itemString, int amount, id.naturalsmp.naturalinteraction.NaturalInteraction plugin) {
-        id.naturalsmp.naturalinteraction.manager.InteractionSession session = 
-            plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
-            
-        if (session != null && session.getOriginalInventory() != null) {
-            session.takeOriginalItem(itemString, amount);
-            return;
-        }
+    private static void takeItem(Player player, String itemString, int amount, NaturalInteraction plugin) {
+        InteractionSession session = plugin != null ? plugin.getInteractionManager().getSession(player.getUniqueId()) : null;
+        if (session != null) { session.takeOriginalItem(itemString, amount); return; }
 
         int remaining = amount;
-        org.bukkit.inventory.ItemStack[] contents = player.getInventory().getContents();
+        ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
-            org.bukkit.inventory.ItemStack item = contents[i];
+            ItemStack item = contents[i];
             if (item == null || item.getType() == org.bukkit.Material.AIR) continue;
-
-            boolean match = false;
-            if (itemString.contains(":")) {
-                dev.lone.itemsadder.api.CustomStack customStack = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
-                if (customStack != null && customStack.getNamespacedID().equalsIgnoreCase(itemString)) {
-                    match = true;
-                }
+            if (!matchesItem(item, itemString)) continue;
+            if (item.getAmount() <= remaining) {
+                remaining -= item.getAmount();
+                player.getInventory().setItem(i, null);
             } else {
-                if (item.getType().name().equalsIgnoreCase(itemString)) {
-                    match = true;
-                }
+                item.setAmount(item.getAmount() - remaining);
+                remaining = 0;
             }
-
-            if (match) {
-                if (item.getAmount() <= remaining) {
-                    remaining -= item.getAmount();
-                    player.getInventory().setItem(i, null);
-                } else {
-                    item.setAmount(item.getAmount() - remaining);
-                    remaining = 0;
-                }
-                if (remaining <= 0) break;
-            }
+            if (remaining <= 0) break;
         }
         player.updateInventory();
+    }
+
+    private static boolean matchesItem(ItemStack item, String id) {
+        if (id.contains(":")) {
+            try {
+                dev.lone.itemsadder.api.CustomStack cs = dev.lone.itemsadder.api.CustomStack.byItemStack(item);
+                return cs != null && cs.getNamespacedID().equalsIgnoreCase(id);
+            } catch (NoClassDefFoundError ignored) { return false; }
+        }
+        return item.getType().name().equalsIgnoreCase(id);
     }
 }

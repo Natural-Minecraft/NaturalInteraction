@@ -1,9 +1,11 @@
 package id.naturalsmp.naturalinteraction;
 
 import id.naturalsmp.naturalinteraction.commands.InteractionCommand;
+import id.naturalsmp.naturalinteraction.commands.NiCommand;
 import id.naturalsmp.naturalinteraction.commands.SidequestCommand;
 import id.naturalsmp.naturalinteraction.commands.StoryCommand;
 import id.naturalsmp.naturalinteraction.editor.EditorMode;
+import id.naturalsmp.naturalinteraction.facts.FactsManager;
 import id.naturalsmp.naturalinteraction.hook.CitizensHook;
 import id.naturalsmp.naturalinteraction.listener.DungeonCompletionListener;
 import id.naturalsmp.naturalinteraction.listener.EditorListener;
@@ -31,6 +33,7 @@ public final class NaturalInteraction extends JavaPlugin {
     private EditorMode editorMode;
     private PrologueJoinListener prologueJoinListener;
     private ElementalEffectManager elementalEffectManager;
+    private FactsManager factsManager;
 
     @Override
     public void onEnable() {
@@ -40,6 +43,7 @@ public final class NaturalInteraction extends JavaPlugin {
         saveDefaultConfig();
 
         // Managers
+        this.factsManager       = new FactsManager(this);
         this.storyManager       = new StoryManager(this);
         this.npcManager         = new StoryNPCManager(this);
         this.interactionManager = new InteractionManager(this);
@@ -103,15 +107,27 @@ public final class NaturalInteraction extends JavaPlugin {
     }
 
     private void registerCommands() {
+        // /ni — main command (v2)
+        NiCommand niCmd = new NiCommand(this);
+        var niEntry = getCommand("ni");
+        if (niEntry != null) {
+            niEntry.setExecutor(niCmd);
+            niEntry.setTabCompleter(niCmd);
+        }
+
+        // Legacy /interaction command still wired for backward compat
         InteractionCommand interactionCmd = new InteractionCommand(this);
-        getCommand("interaction").setExecutor(interactionCmd);
-        getCommand("interaction").setTabCompleter(interactionCmd);
+        var interEntry = getCommand("interaction");
+        if (interEntry != null) {
+            interEntry.setExecutor(interactionCmd);
+            interEntry.setTabCompleter(interactionCmd);
+        }
 
         if (getCommand("story") != null) {
             getCommand("story").setExecutor(new StoryCommand(this));
         }
         if (getCommand("sidequest") != null) {
-            getCommand("sidequest").setExecutor(new SidequestCommand(this)); // Now in commands package
+            getCommand("sidequest").setExecutor(new SidequestCommand(this));
         }
     }
 
@@ -126,11 +142,12 @@ public final class NaturalInteraction extends JavaPlugin {
 
     // ─── Getters ──────────────────────────────────────────────────────────────
 
-    public static NaturalInteraction getInstance()          { return instance; }
-    public StoryManager getStoryManager()                   { return storyManager; }
-    public StoryNPCManager getNpcManager()                  { return npcManager; }
-    public InteractionManager getInteractionManager()       { return interactionManager; }
-    public EditorMode getEditorMode()                       { return editorMode; }
-    public PrologueJoinListener getPrologueJoinListener()   { return prologueJoinListener; }
-    public ElementalEffectManager getElementalEffectManager() { return elementalEffectManager; }
+    public static NaturalInteraction getInstance()              { return instance; }
+    public StoryManager getStoryManager()                       { return storyManager; }
+    public StoryNPCManager getNpcManager()                      { return npcManager; }
+    public InteractionManager getInteractionManager()           { return interactionManager; }
+    public EditorMode getEditorMode()                           { return editorMode; }
+    public PrologueJoinListener getPrologueJoinListener()       { return prologueJoinListener; }
+    public ElementalEffectManager getElementalEffectManager()   { return elementalEffectManager; }
+    public FactsManager getFactsManager()                       { return factsManager; }
 }

@@ -9,16 +9,22 @@ import java.util.Map;
 import java.util.UUID;
 
 public class Interaction implements Serializable {
-    private String id; // unique name
+    private String id;
     private String rootNodeId;
-    private Map<String, DialogueNode> nodes = new HashMap<>(); // id -> node
+    private Map<String, DialogueNode> nodes = new HashMap<>();
+
+    /** Chapter path, e.g. "village.blacksmith" — used to organize interactions in chapters/ folder */
+    private String chapter = "";
+
+    /** Display name shown in the chat dialogue box header. Falls back to formatted id if empty. */
+    private String npcDisplayName = "";
 
     private long cooldownSeconds = 0;
     private boolean oneTimeReward = false;
     private boolean mandatory = false;
-    private int maxConcurrentPlayers = 0; // 0 = unlimited
+    private int maxConcurrentPlayers = 0;
     private PostCompletionMode postCompletionMode = PostCompletionMode.SAME_NODES;
-    private String postCompletionRootNodeId; // Alternate root for returning players
+    private String postCompletionRootNodeId;
     private List<ItemStack> rewards = new ArrayList<>(); // Serialized separately usually, but for now we'll assumes
                                                          // bukkit serialization or transient
 
@@ -137,5 +143,21 @@ public class Interaction implements Serializable {
 
     public void setDialogueUnicode(String dialogueUnicode) {
         this.dialogueUnicode = dialogueUnicode;
+    }
+
+    public String getChapter() {
+        return chapter != null ? chapter : "";
+    }
+
+    public void setChapter(String chapter) {
+        this.chapter = chapter;
+    }
+
+    public String getNpcDisplayName() {
+        return npcDisplayName != null ? npcDisplayName : "";
+    }
+
+    public void setNpcDisplayName(String npcDisplayName) {
+        this.npcDisplayName = npcDisplayName;
     }
 }
