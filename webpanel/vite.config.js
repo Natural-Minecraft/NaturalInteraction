@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: '.',
   server: {
-    port: 3000,
+    port: 4000,
     open: false,
     proxy: {
       '/api': {
@@ -15,6 +15,9 @@ export default defineConfig({
         ws: true,
       },
     },
+  },
+  preview: {
+    allowedHosts: ['story.naturalsmp.net'],
   },
   build: {
     outDir: 'dist',
