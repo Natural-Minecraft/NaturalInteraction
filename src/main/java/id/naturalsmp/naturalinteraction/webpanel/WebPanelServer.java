@@ -56,6 +56,7 @@ public class WebPanelServer {
             // Auth-protected endpoints
             server.createContext("/api/auth/logout", ex -> withAuth(ex, this::handleLogout));
             server.createContext("/api/auth/verify",  ex -> withAuth(ex, this::handleVerify));
+            server.createContext("/api/interactions/file", ex -> withAuth(ex, this::handleInteractionFile));
             server.createContext("/api/interactions", ex -> withAuth(ex, this::handleInteractions));
             server.createContext("/api/chapters",     ex -> withAuth(ex, this::handleChapters));
             server.createContext("/api/facts",        ex -> withAuth(ex, this::handleFacts));
@@ -217,6 +218,92 @@ public class WebPanelServer {
             result.add(m);
         }
         sendJson(exchange, 200, gson.toJson(result));
+    }
+
+    // ─── GET & POST /api/interactions/file/:id ────────────────────────────────
+
+    private void handleInteractionFile(HttpExchange exchange, DatabaseManager.AdminRecord admin) throws IOException {
+        String method = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
+        // path: /api/interactions/file/<id>
+        String[] segments = path.split("/");
+
+        if (segments.length < 5 && method.equals("GET")) {
+            sendJson(exchange, 400, "{\"error\":\"Usage: /api/interactions/file/<id>\"}");
+            return;
+        }
+
+        if (method.equals("GET")) {
+            String id = segments[4];
+            File file = plugin.getInteractionManager().getInteractionFile(id);
+            if (file == null || !file.exists()) {
+                sendJson(exchange, 404, "{\"error\":\"File not found for interaction: " + id + "\"}");
+                return;
+            }
+            try {
+                String content = new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                sendJson(exchange, 200, content);
+            } catch (Exception e) {
+                sendJson(exchange, 500, "{\"error\":\"Failed to read file: " + e.getMessage() + "\"}");
+            }
+
+        } else if (method.equals("POST")) {
+            // If id is provided, update it. Otherwise, create new boilerplate.
+            String id = segments.length >= 5 ? segments[4] : null;
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            
+            try {
+                // Validate it's valid JSON
+                JsonParser.parseString(body);
+            } catch (Exception e) {
+                sendJson(exchange, 400, "{\"error\":\"Invalid JSON format\"}");
+                return;
+            }
+
+            File targetFile;
+            if (id != null) {
+                targetFile = plugin.getInteractionManager().getInteractionFile(id);
+                if (targetFile == null) {
+                    // Create new in root interactions folder
+                    targetFile = new File(plugin.getDataFolder() + "/interactions", id + ".json");
+                }
+            } else {
+                // Fallback if they POST without ID, let's try to extract ID from JSON
+                try {
+                    JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
+                    if (!obj.has("id")) {
+                        sendJson(exchange, 400, "{\"error\":\"JSON must contain an 'id' field\"}");
+                        return;
+                    }
+                    id = obj.get("id").getAsString();
+                    targetFile = plugin.getInteractionManager().getInteractionFile(id);
+                    if (targetFile == null) {
+                        targetFile = new File(plugin.getDataFolder() + "/interactions", id + ".json");
+                    }
+                } catch (Exception e) {
+                    sendJson(exchange, 400, "{\"error\":\"Invalid JSON\"}");
+                    return;
+                }
+            }
+
+            // Write to file
+            try (FileWriter writer = new FileWriter(targetFile)) {
+                writer.write(body);
+            } catch (Exception e) {
+                sendJson(exchange, 500, "{\"error\":\"Failed to write file: " + e.getMessage() + "\"}");
+                return;
+            }
+
+            // Reload interactions to apply changes immediately
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                plugin.getInteractionManager().loadInteractions();
+            });
+
+            sendJson(exchange, 200, "{\"message\":\"Saved successfully and reloaded!\"}");
+
+        } else {
+            sendJson(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
+        }
     }
 
     // ─── GET /api/chapters ────────────────────────────────────────────────────

@@ -111,6 +111,30 @@ public class InteractionManager {
         });
     }
 
+    public File getInteractionFile(String id) {
+        // Try flat interactions/ folder first
+        File flatFile = new File(interactionsFolder, id + ".json");
+        if (flatFile.exists()) return flatFile;
+
+        // Try searching recursively in chapters/ folder
+        return findFileRecursive(chaptersFolder, id + ".json");
+    }
+
+    private File findFileRecursive(File folder, String targetName) {
+        if (!folder.exists() || !folder.isDirectory()) return null;
+        File[] entries = folder.listFiles();
+        if (entries == null) return null;
+        for (File entry : entries) {
+            if (entry.isDirectory()) {
+                File found = findFileRecursive(entry, targetName);
+                if (found != null) return found;
+            } else if (entry.getName().equals(targetName)) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
     // ─── Cooldown Persistence ─────────────────────────────────────────────────
 
     private void loadCooldowns() {

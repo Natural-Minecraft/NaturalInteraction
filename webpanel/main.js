@@ -66,7 +66,8 @@ function switchPage(page) {
 document.getElementById('btn-connect')?.addEventListener('click', connect);
 
 function connect() {
-  const addr = 'ws://' + window.location.host + '/ws';
+  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  const addr = protocol + window.location.host + '/ws';
   
   if (!authToken) {
     console.warn('[WS] No auth token found. Run /ni connect in-game to get a link.');
@@ -198,9 +199,95 @@ function renderInteractions() {
             <span>⏱ ${i.cooldownSeconds || 0}s cooldown</span>
             ${i.oneTimeReward ? '<span>🎁 One-time</span>' : ''}
           </div>
+          <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-edit-json" data-id="${escapeHtml(i.id)}" style="flex:1; padding: 4px 8px; justify-content:center;">Edit JSON</button>
+          </div>
         </div>`;
     })
     .join('');
+
+  // Attach edit listeners
+  document.querySelectorAll('.btn-edit-json').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditor(btn.dataset.id);
+    });
+  });
+}
+
+// ─── JSON Editor ────────────────────────────────────────────────────────────
+
+const editorModal = document.getElementById('editor-modal');
+const editorTextarea = document.getElementById('editor-textarea');
+const editorTitle = document.getElementById('editor-title');
+const editorStatus = document.getElementById('editor-status');
+let currentEditingId = null;
+
+document.getElementById('btn-close-modal')?.addEventListener('click', closeEditor);
+document.getElementById('btn-cancel-modal')?.addEventListener('click', closeEditor);
+document.getElementById('btn-save-modal')?.addEventListener('click', saveEditor);
+
+async function openEditor(id) {
+  currentEditingId = id;
+  editorTitle.textContent = \`Edit Interaction: \${id}\`;
+  editorTextarea.value = 'Loading...';
+  editorStatus.textContent = '';
+  editorStatus.className = '';
+  editorModal.classList.add('active');
+
+  try {
+    const res = await fetch(\`/api/interactions/file/\${id}\`, {
+      headers: { 'Authorization': \`Bearer \${authToken}\` }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const json = await res.json();
+    // Assuming backend sends raw JSON string, if it sends object we stringify
+    editorTextarea.value = typeof json === 'string' ? json : JSON.stringify(json, null, 2);
+  } catch (err) {
+    editorTextarea.value = '';
+    editorStatus.textContent = 'Error loading file: ' + err.message;
+    editorStatus.className = 'error';
+  }
+}
+
+function closeEditor() {
+  editorModal.classList.remove('active');
+  currentEditingId = null;
+}
+
+async function saveEditor() {
+  if (!currentEditingId) return;
+  const content = editorTextarea.value;
+  editorStatus.textContent = 'Saving...';
+  editorStatus.className = '';
+
+  try {
+    // Validate JSON locally first
+    JSON.parse(content);
+  } catch (e) {
+    editorStatus.textContent = 'Invalid JSON format!';
+    editorStatus.className = 'error';
+    return;
+  }
+
+  try {
+    const res = await fetch(\`/api/interactions/file/\${currentEditingId}\`, {
+      method: 'POST',
+      headers: {
+        'Authorization': \`Bearer \${authToken}\`,
+        'Content-Type': 'application/json'
+      },
+      body: content
+    });
+    if (!res.ok) throw new Error(await res.text());
+    
+    editorStatus.textContent = 'Saved and reloaded successfully!';
+    editorStatus.className = 'success';
+    // Let the websocket updates refresh the list in the background
+  } catch (err) {
+    editorStatus.textContent = 'Error saving: ' + err.message;
+    editorStatus.className = 'error';
+  }
 }
 
 // ─── Render: Chapters ───────────────────────────────────────────────────────
@@ -275,9 +362,29 @@ document.getElementById('search-input')?.addEventListener('input', (e) => {
 // ─── New Button ─────────────────────────────────────────────────────────────
 
 document.getElementById('btn-new')?.addEventListener('click', () => {
-  const id = prompt('Enter interaction ID:');
+  const id = prompt('Enter new interaction ID (e.g. main_quest_1):');
   if (id && id.trim()) {
-    sendMessage({ type: 'create_interaction', data: { id: id.trim() } });
+    const defaultJson = {
+      id: id.trim(),
+      chapter: "uncategorized",
+      npcDisplayName: "New NPC",
+      rootNodeId: "start",
+      nodes: {
+        start: {
+          type: "TEXT",
+          lines: ["Hello there!"],
+          nextNodeId: null
+        }
+      }
+    };
+    
+    // Auto-open editor with boilerplate
+    currentEditingId = id.trim();
+    editorTitle.textContent = `New Interaction: ${currentEditingId}`;
+    editorTextarea.value = JSON.stringify(defaultJson, null, 2);
+    editorStatus.textContent = 'Unsaved new interaction';
+    editorStatus.className = '';
+    editorModal.classList.add('active');
   }
 });
 
