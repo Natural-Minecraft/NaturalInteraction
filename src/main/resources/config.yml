@@ -25,7 +25,7 @@ webpanel:
   enabled: true
   port: 25809
   # URL publik (untuk /ni connect dan CORS)
-  public-url: "https://story.naturalsmp.net"
+  public-url: "https://story.naturalsmp.my.id"
   # Token expire dalam detik (default 8 jam)
   token-expire-seconds: 28800
 

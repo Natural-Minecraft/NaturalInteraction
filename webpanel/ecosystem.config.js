@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'ni-webpanel',
-      script: 'npx',
-      args: 'vite --host 0.0.0.0 --port 3000',
+      script: 'npm',
+      args: 'run preview -- --host 0.0.0.0 --port 4000',
       cwd: './',
       watch: false,
       env: {
