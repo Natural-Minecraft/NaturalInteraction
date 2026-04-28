@@ -1,8 +1,12 @@
 package id.naturalsmp.naturalinteraction.commands;
 
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
+import id.naturalsmp.naturalinteraction.cinematic.CinematicManager;
+import id.naturalsmp.naturalinteraction.cinematic.CinematicSequence;
 import id.naturalsmp.naturalinteraction.commands.subs.*;
 import id.naturalsmp.naturalinteraction.facts.FactsManager;
+import id.naturalsmp.naturalinteraction.manifest.AudienceDisplay;
+import id.naturalsmp.naturalinteraction.manifest.ManifestManager;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -180,7 +184,51 @@ public class NiCommand implements CommandExecutor, TabCompleter {
 
     private void handleCinematic(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Cinematic system (Phase 6)"));
+        CinematicManager cm = plugin.getCinematicManager();
+
+        if (args.length < 2) {
+            // List all cinematics
+            var ids = cm.getSequenceIds();
+            sender.sendMessage(ChatUtils.toComponent("&6--- Cinematics (&e" + ids.size() + "&6) ---"));
+            if (ids.isEmpty()) {
+                sender.sendMessage(ChatUtils.toComponent("  &7(tidak ada cinematic)"));
+            } else {
+                ids.stream().sorted().forEach(id -> {
+                    CinematicSequence seq = cm.getSequence(id);
+                    int pts = seq != null ? seq.getPoints().size() : 0;
+                    int dur = seq != null ? seq.getTotalDurationTicks() / 20 : 0;
+                    sender.sendMessage(ChatUtils.toComponent(
+                            "  &7" + id + " &8— &f" + pts + " points, " + dur + "s"));
+                });
+            }
+            return;
+        }
+
+        String action = args[1].toLowerCase();
+        switch (action) {
+            case "start" -> {
+                if (args.length < 3) {
+                    sender.sendMessage(ChatUtils.toComponent("&c/ni cinematic start <id> [player]"));
+                    return;
+                }
+                CinematicSequence seq = cm.getSequence(args[2]);
+                if (seq == null) {
+                    sender.sendMessage(ChatUtils.toComponent("&cCinematic tidak ditemukan: &f" + args[2]));
+                    return;
+                }
+                Player t = resolvePlayer(sender, args, 3);
+                if (t == null) return;
+                cm.getPlayer().play(t, seq);
+                sender.sendMessage(ChatUtils.toComponent("&a✔ Playing cinematic &e" + args[2] + " &afor &e" + t.getName()));
+            }
+            case "stop" -> {
+                Player t = resolvePlayer(sender, args, 2);
+                if (t == null) return;
+                cm.getPlayer().stop(t);
+                sender.sendMessage(ChatUtils.toComponent("&a✔ Stopped cinematic for &e" + t.getName()));
+            }
+            default -> sender.sendMessage(ChatUtils.toComponent("&c/ni cinematic <start|stop> [args]"));
+        }
     }
 
     private void handleQuest(CommandSender sender, String[] args) {
@@ -195,7 +243,27 @@ public class NiCommand implements CommandExecutor, TabCompleter {
 
     private void handleManifest(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Manifest system (Phase 4)"));
+        ManifestManager mm = plugin.getManifestManager();
+
+        if (args.length >= 2 && args[1].equalsIgnoreCase("inspect")) {
+            Player t = resolvePlayer(sender, args, 2);
+            if (t == null) return;
+            sender.sendMessage(ChatUtils.toComponent("&6--- Manifest Audiences for &e" + t.getName() + " &6---"));
+            for (AudienceDisplay entry : mm.getEntries()) {
+                boolean inAud = entry.getAudience().contains(t.getUniqueId());
+                String icon = inAud ? "&a✔" : "&c✘";
+                sender.sendMessage(ChatUtils.toComponent(
+                        "  " + icon + " &7" + entry.getId() + " &8(" + entry.getType() + ")"));
+            }
+            return;
+        }
+
+        // Default: list
+        var entries = mm.getEntries();
+        sender.sendMessage(ChatUtils.toComponent("&6--- Manifests (&e" + entries.size() + "&6) ---"));
+        entries.forEach(e -> sender.sendMessage(ChatUtils.toComponent(
+                "  &7" + e.getId() + " &8— " + e.getType()
+                        + " &8(" + e.getAudience().size() + " in audience)")));
     }
 
     private void handleAssets(CommandSender sender, String[] args) {
@@ -264,7 +332,12 @@ public class NiCommand implements CommandExecutor, TabCompleter {
             case "clearchat", "untrack" -> { return onlinePlayers(args[args.length - 1]); }
             case "cinematic" -> {
                 if (args.length == 2) return List.of("start", "stop");
-                if (args.length == 3) return new ArrayList<>(plugin.getInteractionManager().getInteractionIds());
+                if (args.length == 3 && args[1].equalsIgnoreCase("start"))
+                    return new ArrayList<>(plugin.getCinematicManager().getSequenceIds());
+                return onlinePlayers(args[args.length - 1]);
+            }
+            case "manifest" -> {
+                if (args.length == 2) return List.of("inspect", "list");
                 return onlinePlayers(args[args.length - 1]);
             }
             case "quest" -> { if (args.length == 2) return List.of("track"); }

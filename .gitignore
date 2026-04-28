@@ -111,3 +111,7 @@ buildNumber.properties
 
 # Common working directory
 run/
+
+# Web Panel (Node.js)
+webpanel/node_modules/
+webpanel/dist/

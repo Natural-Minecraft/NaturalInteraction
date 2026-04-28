@@ -20,6 +20,7 @@ import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
 import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
 import id.naturalsmp.naturalinteraction.webpanel.WebPanelServer;
+import id.naturalsmp.naturalinteraction.cinematic.CinematicManager;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.event.EventHandler;
@@ -40,6 +41,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     private FactsManager factsManager;
     private ManifestManager manifestManager;
     private WebPanelServer webPanelServer;
+    private CinematicManager cinematicManager;
 
     @Override
     public void onEnable() {
@@ -88,6 +90,9 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
             this.webPanelServer.start(port);
         }
 
+        // Cinematic system (Phase 6)
+        this.cinematicManager = new CinematicManager(this);
+
         // Register this class as listener for PlayerQuitEvent (manifest cleanup)
         getServer().getPluginManager().registerEvents(this, this);
 
@@ -99,6 +104,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         if (manifestManager != null) manifestManager.removePlayer(event.getPlayer());
+        if (cinematicManager != null) cinematicManager.getPlayer().stop(event.getPlayer());
     }
 
     @Override
@@ -108,6 +114,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         if (elementalEffectManager != null) elementalEffectManager.stop();
         if (manifestManager != null)     manifestManager.cleanup();
         if (webPanelServer != null)      webPanelServer.stop();
+        if (cinematicManager != null)    cinematicManager.cleanup();
     }
 
     // ─── Registration ─────────────────────────────────────────────────────────
@@ -157,6 +164,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         if (interactionManager != null)     interactionManager.loadInteractions();
         if (elementalEffectManager != null) elementalEffectManager.reload();
         if (manifestManager != null)        manifestManager.reload();
+        if (cinematicManager != null)       cinematicManager.reload();
     }
 
     // ─── Getters ──────────────────────────────────────────────────────────────
@@ -170,4 +178,5 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     public ElementalEffectManager getElementalEffectManager()   { return elementalEffectManager; }
     public FactsManager getFactsManager()                       { return factsManager; }
     public ManifestManager getManifestManager()                 { return manifestManager; }
+    public CinematicManager getCinematicManager()               { return cinematicManager; }
 }
