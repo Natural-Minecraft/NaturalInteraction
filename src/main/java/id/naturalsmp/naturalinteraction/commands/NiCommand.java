@@ -126,7 +126,12 @@ public class NiCommand implements CommandExecutor, TabCompleter {
 
     private void handleConnect(CommandSender sender) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        String url = "http://localhost:" + plugin.getConfig().getInt("webpanel.port", 8585);
+        String url = plugin.getConfig().getString("webpanel.public-url", "https://story.naturalsmp.net");
+        boolean enabled = plugin.getConfig().getBoolean("webpanel.enabled", false);
+        if (!enabled) {
+            sender.sendMessage(ChatUtils.toComponent("&cWeb Panel belum diaktifkan. Set &fwebpanel.enabled: true &cdi config.yml"));
+            return;
+        }
         sender.sendMessage(ChatUtils.toComponent("&6✦ &eNaturalInteraction Web Panel"));
         sender.sendMessage(Component.text("  ").append(
                 Component.text(url, NamedTextColor.AQUA)

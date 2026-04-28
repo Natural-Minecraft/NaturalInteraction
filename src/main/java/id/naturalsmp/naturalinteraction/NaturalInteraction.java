@@ -21,6 +21,7 @@ import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
 import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
 import id.naturalsmp.naturalinteraction.webpanel.WebPanelServer;
 import id.naturalsmp.naturalinteraction.cinematic.CinematicManager;
+import id.naturalsmp.naturalinteraction.database.DatabaseManager;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.event.EventHandler;
@@ -42,6 +43,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     private ManifestManager manifestManager;
     private WebPanelServer webPanelServer;
     private CinematicManager cinematicManager;
+    private DatabaseManager databaseManager;
 
     @Override
     public void onEnable() {
@@ -56,6 +58,10 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         this.npcManager         = new StoryNPCManager(this);
         this.interactionManager = new InteractionManager(this);
         this.editorMode         = new EditorMode(this);
+
+        // Database (MySQL) — opt-in, jika mysql.enabled: true
+        this.databaseManager = new DatabaseManager(this);
+        this.databaseManager.connect();
 
         // Citizens traits
         CitizensHook.registerTraits(this);
@@ -115,6 +121,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         if (manifestManager != null)     manifestManager.cleanup();
         if (webPanelServer != null)      webPanelServer.stop();
         if (cinematicManager != null)    cinematicManager.cleanup();
+        if (databaseManager != null)     databaseManager.disconnect();
     }
 
     // ─── Registration ─────────────────────────────────────────────────────────
@@ -179,4 +186,5 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     public FactsManager getFactsManager()                       { return factsManager; }
     public ManifestManager getManifestManager()                 { return manifestManager; }
     public CinematicManager getCinematicManager()               { return cinematicManager; }
+    public DatabaseManager getDatabaseManager()                 { return databaseManager; }
 }

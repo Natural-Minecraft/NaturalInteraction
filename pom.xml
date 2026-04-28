@@ -6,7 +6,7 @@
 
     <groupId>id.naturalsmp</groupId>
     <artifactId>naturalinteraction</artifactId>
-    <version>1.3.0</version>
+    <version>2.0.0</version>
     <packaging>jar</packaging>
 
     <name>NaturalInteraction</name>
@@ -39,6 +39,30 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <relocations>
+                                <!-- Relocate HikariCP to avoid conflicts with other plugins -->
+                                <relocation>
+                                    <pattern>com.zaxxer.hikari</pattern>
+                                    <shadedPattern>id.naturalsmp.naturalinteraction.libs.hikari</shadedPattern>
+                                </relocation>
+                                <!-- Relocate MySQL connector -->
+                                <relocation>
+                                    <pattern>com.mysql</pattern>
+                                    <shadedPattern>id.naturalsmp.naturalinteraction.libs.mysql</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/LICENSE*</exclude>
+                                        <exclude>META-INF/NOTICE*</exclude>
+                                        <exclude>META-INF/DEPENDENCIES</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -123,6 +147,20 @@
             <artifactId>ProtocolLib</artifactId>
             <version>5.3.0</version>
             <scope>provided</scope>
+        </dependency>
+        <!-- HikariCP Connection Pool (shaded) -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <!-- MySQL Connector (shaded) -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.3.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

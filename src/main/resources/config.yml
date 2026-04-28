@@ -20,8 +20,23 @@ plugins:
   multiverse-teleport-command: "mvtp"
   sudo-command: "sudo"
 
-# Web Panel (Phase 5) — set enabled: true setelah server disetup
+# Web Panel — https://story.naturalsmp.net
 webpanel:
   enabled: false
   port: 8585
-  token-expire-seconds: 300
+  # URL publik (untuk /ni connect dan CORS)
+  public-url: "https://story.naturalsmp.net"
+  # Token expire dalam detik (default 8 jam)
+  token-expire-seconds: 28800
+
+# MySQL — hanya perlu dikonfigurasi di sini, web panel pakai API dari plugin
+mysql:
+  enabled: false
+  host: "103.93.129.117"
+  port: 3306
+  database: "naturalsmp_interaction"
+  username: "root"
+  password: "changeme"
+  # HikariCP pool settings
+  pool-size: 5
+  connection-timeout: 30000
