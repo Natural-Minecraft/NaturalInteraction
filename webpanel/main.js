@@ -9,6 +9,21 @@ let ws = null;
 let currentPage = 'interactions';
 let interactionsData = [];
 let isConnected = false;
+let authToken = localStorage.getItem('ni_auth_token') || '';
+
+// ─── Magic Link Auth ────────────────────────────────────────────────────────
+
+const hash = window.location.hash;
+if (hash && hash.length > 1) {
+  const possibleToken = hash.substring(1);
+  if (possibleToken.length === 6) { // Our short tokens are 6 chars
+    authToken = possibleToken;
+    localStorage.setItem('ni_auth_token', authToken);
+    // Remove hash from URL without reloading
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    console.log('[Auth] Saved magic link token.');
+  }
+}
 
 // ─── Navigation ─────────────────────────────────────────────────────────────
 
@@ -51,18 +66,30 @@ function switchPage(page) {
 document.getElementById('btn-connect')?.addEventListener('click', connect);
 
 function connect() {
-  const addr = document.getElementById('server-address')?.value || 'ws://localhost:8585/ws';
-  const token = document.getElementById('auth-token')?.value || '';
+  const addr = 'ws://' + window.location.host + '/ws';
+  
+  if (!authToken) {
+    console.warn('[WS] No auth token found. Run /ni connect in-game to get a link.');
+    document.getElementById('page-title').textContent = '⚠️ Not Authenticated';
+    document.getElementById('breadcrumb').innerHTML = 'Run <code style="color:#00f2fe">/ni connect</code> in Minecraft to login.';
+    return;
+  }
 
   if (ws) ws.close();
 
   try {
-    ws = new WebSocket(addr + (token ? `?token=${token}` : ''));
+    ws = new WebSocket(addr + "?token=" + authToken);
 
     ws.onopen = () => {
       setConnectionStatus(true);
-      sendMessage({ type: 'list_interactions' });
-      sendMessage({ type: 'list_chapters' });
+      // Send auth frame first
+      ws.send(JSON.stringify({ type: 'auth', token: authToken }));
+      
+      // Then request data
+      setTimeout(() => {
+        sendMessage({ type: 'list_interactions' });
+        sendMessage({ type: 'list_chapters' });
+      }, 200);
       console.log('[WS] Connected to', addr);
     };
 

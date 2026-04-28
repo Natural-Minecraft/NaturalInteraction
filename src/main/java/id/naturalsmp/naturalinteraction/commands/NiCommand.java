@@ -127,15 +127,41 @@ public class NiCommand implements CommandExecutor, TabCompleter {
     private void handleConnect(CommandSender sender) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
         String url = plugin.getConfig().getString("webpanel.public-url", "https://story.naturalsmp.net");
+        if (url.endsWith("/")) url = url.substring(0, url.length() - 1); // remove trailing slash
         boolean enabled = plugin.getConfig().getBoolean("webpanel.enabled", false);
+        
         if (!enabled) {
             sender.sendMessage(ChatUtils.toComponent("&cWeb Panel belum diaktifkan. Set &fwebpanel.enabled: true &cdi config.yml"));
             return;
         }
+
+        var db = plugin.getDatabaseManager();
+        if (db == null || !db.isConnected()) {
+            sender.sendMessage(ChatUtils.toComponent("&cDatabase MySQL tidak terhubung. Token login tidak bisa dibuat."));
+            return;
+        }
+
+        var admin = db.getAdmin("admin");
+        if (admin == null) {
+            sender.sendMessage(ChatUtils.toComponent("&cAkun 'admin' default belum ada di database. Silakan load plugin dengan MySQL aktif dulu."));
+            return;
+        }
+
+        // Generate 6-char token
+        String token = id.naturalsmp.naturalinteraction.database.PasswordUtil.generateShortToken();
+        long expire = plugin.getConfig().getLong("webpanel.token-expire-seconds", 28800);
+        long expiresAt = System.currentTimeMillis() + (expire * 1000);
+        
+        // Save to DB
+        db.saveToken(token, admin.id(), expiresAt);
+        
+        String magicLink = url + "/#" + token;
+
         sender.sendMessage(ChatUtils.toComponent("&6✦ &eNaturalInteraction Web Panel"));
+        sender.sendMessage(ChatUtils.toComponent("&7Klik link di bawah ini untuk login otomatis:"));
         sender.sendMessage(Component.text("  ").append(
-                Component.text(url, NamedTextColor.AQUA)
-                        .clickEvent(ClickEvent.openUrl(url))));
+                Component.text(magicLink, NamedTextColor.AQUA)
+                        .clickEvent(ClickEvent.openUrl(magicLink))));
     }
 
     private void handleFacts(CommandSender sender, String[] args) {
