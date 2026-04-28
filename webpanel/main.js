@@ -3,6 +3,11 @@
  * Handles navigation, WebSocket connection, and page rendering.
  */
 
+// ─── Configuration ────────────────────────────────────────────────────────────
+
+const API_BASE = 'http://furina.nexuscloud.id:25809';
+const WS_BASE = 'ws://furina.nexuscloud.id:25809/ws';
+
 // ─── State ──────────────────────────────────────────────────────────────────
 
 let ws = null;
@@ -66,8 +71,7 @@ function switchPage(page) {
 document.getElementById('btn-connect')?.addEventListener('click', connect);
 
 function connect() {
-  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-  const addr = protocol + window.location.host + '/ws';
+  const addr = WS_BASE;
   
   if (!authToken) {
     console.warn('[WS] No auth token found. Run /ni connect in-game to get a link.');
@@ -236,7 +240,7 @@ async function openEditor(id) {
   editorModal.classList.add('active');
 
   try {
-    const res = await fetch(\`/api/interactions/file/\${id}\`, {
+    const res = await fetch(\`\${API_BASE}/api/interactions/file/\${id}\`, {
       headers: { 'Authorization': \`Bearer \${authToken}\` }
     });
     if (!res.ok) throw new Error(await res.text());
@@ -271,7 +275,7 @@ async function saveEditor() {
   }
 
   try {
-    const res = await fetch(\`/api/interactions/file/\${currentEditingId}\`, {
+    const res = await fetch(\`\${API_BASE}/api/interactions/file/\${currentEditingId}\`, {
       method: 'POST',
       headers: {
         'Authorization': \`Bearer \${authToken}\`,
