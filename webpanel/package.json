@@ -1,16 +1,20 @@
 {
   "name": "naturalinteraction-webpanel",
-  "version": "1.0.0",
   "private": true,
-  "description": "NaturalInteraction Visual Web Panel — manage interactions, NPCs, quests, and cinematics",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {},
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@xyflow/react": "^12.3.6"
+  },
   "devDependencies": {
-    "vite": "^6.3.0"
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
   }
 }
