@@ -7,6 +7,7 @@ import id.naturalsmp.naturalinteraction.commands.subs.*;
 import id.naturalsmp.naturalinteraction.facts.FactsManager;
 import id.naturalsmp.naturalinteraction.manifest.AudienceDisplay;
 import id.naturalsmp.naturalinteraction.manifest.ManifestManager;
+import id.naturalsmp.naturalinteraction.webpanel.TokenSession;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -126,42 +127,34 @@ public class NiCommand implements CommandExecutor, TabCompleter {
 
     private void handleConnect(CommandSender sender) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        String url = plugin.getConfig().getString("webpanel.public-url", "https://story.naturalsmp.net");
-        if (url.endsWith("/")) url = url.substring(0, url.length() - 1); // remove trailing slash
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatUtils.toComponent("&cHanya bisa digunakan oleh player."));
+            return;
+        }
         boolean enabled = plugin.getConfig().getBoolean("webpanel.enabled", false);
-        
         if (!enabled) {
             sender.sendMessage(ChatUtils.toComponent("&cWeb Panel belum diaktifkan. Set &fwebpanel.enabled: true &cdi config.yml"));
             return;
         }
 
-        var db = plugin.getDatabaseManager();
-        if (db == null || !db.isConnected()) {
-            sender.sendMessage(ChatUtils.toComponent("&cDatabase MySQL tidak terhubung. Token login tidak bisa dibuat."));
-            return;
-        }
+        // Generate LuckPerms-style token (30 min)
+        long expireSec = plugin.getConfig().getLong("webpanel.token-expire-seconds", 1800);
+        TokenSession.SessionData session = TokenSession.createSession(
+                player.getName(), player.getUniqueId(), expireSec * 1000);
 
-        var admin = db.getAdmin("admin");
-        if (admin == null) {
-            sender.sendMessage(ChatUtils.toComponent("&cAkun 'admin' default belum ada di database. Silakan load plugin dengan MySQL aktif dulu."));
-            return;
-        }
+        String publicUrl = plugin.getConfig().getString("webpanel.public-url", "https://story.naturalsmp.net");
+        // Remove trailing slash
+        if (publicUrl.endsWith("/")) publicUrl = publicUrl.substring(0, publicUrl.length() - 1);
+        String fullUrl = publicUrl + "/" + session.token();
 
-        // Generate 6-char token
-        String token = id.naturalsmp.naturalinteraction.database.PasswordUtil.generateShortToken();
-        long expire = plugin.getConfig().getLong("webpanel.token-expire-seconds", 28800);
-        long expiresAt = System.currentTimeMillis() + (expire * 1000);
-        
-        // Save to DB
-        db.saveToken(token, admin.id(), expiresAt);
-        
-        String magicLink = url + "/#" + token;
-
+        sender.sendMessage(Component.empty());
         sender.sendMessage(ChatUtils.toComponent("&6✦ &eNaturalInteraction Web Panel"));
-        sender.sendMessage(ChatUtils.toComponent("&7Klik link di bawah ini untuk login otomatis:"));
+        sender.sendMessage(ChatUtils.toComponent("&7Klik link dibawah untuk membuka editor:"));
         sender.sendMessage(Component.text("  ").append(
-                Component.text(magicLink, NamedTextColor.AQUA)
-                        .clickEvent(ClickEvent.openUrl(magicLink))));
+                Component.text(fullUrl, NamedTextColor.AQUA)
+                        .clickEvent(ClickEvent.openUrl(fullUrl))));
+        sender.sendMessage(ChatUtils.toComponent("&8Token berlaku " + (expireSec / 60) + " menit."));
+        sender.sendMessage(Component.empty());
     }
 
     private void handleFacts(CommandSender sender, String[] args) {

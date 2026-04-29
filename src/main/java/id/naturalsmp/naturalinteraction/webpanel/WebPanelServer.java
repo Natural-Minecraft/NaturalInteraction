@@ -1,79 +1,82 @@
 package id.naturalsmp.naturalinteraction.webpanel;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
-import id.naturalsmp.naturalinteraction.database.DatabaseManager;
-import id.naturalsmp.naturalinteraction.database.PasswordUtil;
 import id.naturalsmp.naturalinteraction.model.Interaction;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.Executors;
 
 /**
- * Embedded HTTP server for the NaturalInteraction Web Panel.
+ * Embedded HTTP server for NaturalInteraction Web Panel.
  *
- * Public URL: https://story.naturalsmp.net (via Cloudflare Tunnel)
- * Local:      http://103.93.129.117:<port>
+ * Auth: LuckPerms-style — /ni connect generates a 6-char token.
+ * Frontend calls API directly with Bearer token.
  *
- * Endpoints:
- *  POST /api/auth/login       → { username, password } → { token, role }
- *  POST /api/auth/logout      → [Auth] → 200
- *  GET  /api/auth/verify      → [Auth] → { username, role }
- *  GET  /api/interactions     → [Auth] → list
- *  GET  /api/chapters         → [Auth] → tree
- *  GET  /api/facts/:uuid      → [Auth] → player facts
- *  WS   /ws                   → WebSocket upgrade
+ * Endpoints (all token-protected except /api/session/verify):
+ *  GET  /api/session/verify?token=XxxYyy  → verify token, return session info
+ *  GET  /api/interactions                  → list all interactions (summary)
+ *  GET  /api/interaction/:id               → full interaction detail (all nodes)
+ *  POST /api/interaction/:id               → save/update interaction
+ *  DELETE /api/interaction/:id             → delete interaction
+ *  POST /api/interaction-new               → create new interaction
  */
 public class WebPanelServer {
 
     private final NaturalInteraction plugin;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private HttpServer server;
     private String publicUrl;
+    private String apiUrl;
 
     public WebPanelServer(NaturalInteraction plugin) {
         this.plugin = plugin;
         this.publicUrl = plugin.getConfig().getString("webpanel.public-url", "https://story.naturalsmp.net");
+        this.apiUrl = plugin.getConfig().getString("webpanel.api-url", "");
     }
 
     public void start(int port) {
         try {
-            server = HttpServer.create(new InetSocketAddress(port), 0);
+            server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0);
             server.setExecutor(Executors.newCachedThreadPool());
 
-            // Auth endpoints (no auth required)
-            server.createContext("/api/auth/login",  this::handleLogin);
+            // Token verify (no auth required — this IS the auth endpoint)
+            server.createContext("/api/session/verify", this::handleSessionVerify);
 
-            // Auth-protected endpoints
-            server.createContext("/api/auth/logout", ex -> withAuth(ex, this::handleLogout));
-            server.createContext("/api/auth/verify",  ex -> withAuth(ex, this::handleVerify));
-            server.createContext("/api/interactions/file", ex -> withAuth(ex, this::handleInteractionFile));
+            // Protected endpoints
             server.createContext("/api/interactions", ex -> withAuth(ex, this::handleInteractions));
-            server.createContext("/api/chapters",     ex -> withAuth(ex, this::handleChapters));
-            server.createContext("/api/facts",        ex -> withAuth(ex, this::handleFacts));
+            server.createContext("/api/interaction-new", ex -> withAuth(ex, this::handleCreateNew));
+            server.createContext("/api/interaction/", ex -> withAuth(ex, this::handleInteractionCrud));
+            server.createContext("/api/facts/", ex -> withAuth(ex, this::handleFacts));
 
-            // WebSocket + static fallback
-            server.createContext("/ws", this::handleWebSocket);
-            server.createContext("/",   this::handleStatic);
+            // Static / health
+            server.createContext("/", this::handleHealth);
 
             server.start();
-            plugin.getLogger().info("[WebPanel] Started on port " + port + " — " + publicUrl);
 
-            // Schedule token cleanup every hour
+            // Build API URL (auto-detect if not configured)
+            if (apiUrl.isEmpty()) {
+                apiUrl = "http://localhost:" + port;
+            }
+
+            plugin.getLogger().info("[WebPanel] Started on port " + port);
+            plugin.getLogger().info("[WebPanel] Public URL: " + publicUrl);
+            plugin.getLogger().info("[WebPanel] API URL: " + apiUrl);
+
+            // Cleanup expired tokens every 5 minutes
             plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
-                if (plugin.getDatabaseManager() != null && plugin.getDatabaseManager().isConnected()) {
-                    plugin.getDatabaseManager().cleanExpiredTokens();
-                }
-            }, 72000L, 72000L); // every hour
+                int cleaned = TokenSession.cleanExpired();
+                if (cleaned > 0)
+                    plugin.getLogger().info("[WebPanel] Cleaned " + cleaned + " expired token(s).");
+            }, 6000L, 6000L);
 
         } catch (Exception e) {
             plugin.getLogger().severe("[WebPanel] Failed to start: " + e.getMessage());
@@ -87,53 +90,204 @@ public class WebPanelServer {
         }
     }
 
+    public String getPublicUrl() { return publicUrl; }
+    public String getApiUrl() { return apiUrl; }
+
     // ─── Auth Guard ───────────────────────────────────────────────────────────
 
     @FunctionalInterface
     interface AuthedHandler {
-        void handle(HttpExchange ex, DatabaseManager.AdminRecord admin) throws IOException;
+        void handle(HttpExchange ex, TokenSession.SessionData session) throws IOException;
     }
 
     private void withAuth(HttpExchange exchange, AuthedHandler handler) throws IOException {
+        setCorsHeaders(exchange);
         if ("OPTIONS".equals(exchange.getRequestMethod())) {
-            setCorsHeaders(exchange);
             exchange.sendResponseHeaders(204, -1);
             return;
         }
-        setCorsHeaders(exchange);
 
+        // Extract token from Authorization header
         String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            sendJson(exchange, 401, "{\"error\":\"Unauthorized\"}");
+            sendJson(exchange, 401, "{\"error\":\"Missing or invalid Authorization header\"}");
             return;
         }
 
         String token = authHeader.substring(7).trim();
-        DatabaseManager db = plugin.getDatabaseManager();
-
-        if (db == null || !db.isConnected()) {
-            // Fallback mode: jika MySQL disabled, pakai in-memory token check
-            sendJson(exchange, 503, "{\"error\":\"Database not connected\"}");
+        TokenSession.SessionData session = TokenSession.verify(token);
+        if (session == null) {
+            sendJson(exchange, 401, "{\"error\":\"Token invalid or expired. Ketik /ni connect lagi di Minecraft.\"}");
             return;
         }
 
-        DatabaseManager.AdminRecord admin = db.getAdminByToken(token);
-        if (admin == null) {
-            sendJson(exchange, 401, "{\"error\":\"Token invalid or expired\"}");
-            return;
-        }
-
-        handler.handle(exchange, admin);
+        handler.handle(exchange, session);
     }
 
-    // ─── POST /api/auth/login ─────────────────────────────────────────────────
+    // ─── GET /api/session/verify ──────────────────────────────────────────────
 
-    private void handleLogin(HttpExchange exchange) throws IOException {
+    private void handleSessionVerify(HttpExchange exchange) throws IOException {
         setCorsHeaders(exchange);
         if ("OPTIONS".equals(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
             return;
         }
+
+        // Extract token from query string
+        String query = exchange.getRequestURI().getQuery();
+        String token = null;
+        if (query != null) {
+            for (String param : query.split("&")) {
+                String[] kv = param.split("=", 2);
+                if (kv.length == 2 && kv[0].equals("token")) {
+                    token = URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+                }
+            }
+        }
+
+        if (token == null || token.isBlank()) {
+            sendJson(exchange, 400, "{\"error\":\"Missing token parameter\"}");
+            return;
+        }
+
+        TokenSession.SessionData session = TokenSession.verify(token);
+        if (session == null) {
+            sendJson(exchange, 401, "{\"error\":\"Token invalid or expired\"}");
+            return;
+        }
+
+        JsonObject resp = new JsonObject();
+        resp.addProperty("valid", true);
+        resp.addProperty("token", session.token());
+        resp.addProperty("playerName", session.playerName());
+        resp.addProperty("playerUUID", session.playerUUID().toString());
+        resp.addProperty("expiresIn", (session.expiresAt() - System.currentTimeMillis()) / 1000);
+        resp.addProperty("apiUrl", apiUrl);
+        sendJson(exchange, 200, gson.toJson(resp));
+    }
+
+    // ─── GET /api/interactions ────────────────────────────────────────────────
+
+    private void handleInteractions(HttpExchange exchange, TokenSession.SessionData session) throws IOException {
+        if (!"GET".equals(exchange.getRequestMethod())) {
+            sendJson(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
+            return;
+        }
+
+        Collection<String> ids = plugin.getInteractionManager().getInteractionIds();
+        JsonArray result = new JsonArray();
+        for (String id : ids) {
+            Interaction i = plugin.getInteractionManager().getInteraction(id);
+            if (i == null) continue;
+            JsonObject obj = new JsonObject();
+            obj.addProperty("id", i.getId());
+            obj.addProperty("chapter", i.getChapter());
+            obj.addProperty("npcDisplayName", i.getNpcDisplayName());
+            obj.addProperty("nodeCount", i.getNodes().size());
+            obj.addProperty("rootNodeId", i.getRootNodeId());
+            obj.addProperty("cooldownSeconds", i.getCooldownSeconds());
+            obj.addProperty("mandatory", i.isMandatory());
+            obj.addProperty("oneTimeReward", i.isOneTimeReward());
+            obj.addProperty("dialogueUnicode", i.getDialogueUnicode());
+            // Detect prologue
+            obj.addProperty("isPrologue", "prologue".equalsIgnoreCase(i.getId()));
+            result.add(obj);
+        }
+        sendJson(exchange, 200, gson.toJson(result));
+    }
+
+    // ─── /api/interaction/:id (CRUD) ──────────────────────────────────────────
+
+    private void handleInteractionCrud(HttpExchange exchange, TokenSession.SessionData session) throws IOException {
+        String path = exchange.getRequestURI().getPath();
+        String interactionId = path.substring("/api/interaction/".length());
+        if (interactionId.isEmpty()) {
+            sendJson(exchange, 400, "{\"error\":\"Missing interaction ID\"}");
+            return;
+        }
+
+        switch (exchange.getRequestMethod()) {
+            case "GET" -> handleGetInteraction(exchange, interactionId);
+            case "POST", "PUT" -> handleSaveInteraction(exchange, interactionId);
+            case "DELETE" -> handleDeleteInteraction(exchange, interactionId);
+            default -> sendJson(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
+        }
+    }
+
+    private void handleGetInteraction(HttpExchange exchange, String id) throws IOException {
+        // Read raw JSON file to preserve exact format
+        File file = findInteractionFile(id);
+        if (file == null || !file.exists()) {
+            sendJson(exchange, 404, "{\"error\":\"Interaction not found: " + id + "\"}");
+            return;
+        }
+
+        String json = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+        sendJson(exchange, 200, json);
+    }
+
+    private void handleSaveInteraction(HttpExchange exchange, String id) throws IOException {
+        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+
+        // Validate JSON
+        try {
+            JsonParser.parseString(body);
+        } catch (JsonSyntaxException e) {
+            sendJson(exchange, 400, "{\"error\":\"Invalid JSON: " + e.getMessage() + "\"}");
+            return;
+        }
+
+        // Write to file
+        File file = findInteractionFile(id);
+        if (file == null) {
+            // New file
+            File folder = new File(plugin.getDataFolder(), "interactions");
+            if (!folder.exists()) folder.mkdirs();
+            file = new File(folder, id + ".json");
+        }
+
+        // Pretty-print the JSON
+        JsonElement parsed = JsonParser.parseString(body);
+        String prettyJson = gson.toJson(parsed);
+
+        Files.writeString(file.toPath(), prettyJson, StandardCharsets.UTF_8);
+
+        // Hot-reload this interaction
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            plugin.getInteractionManager().reloadInteraction(id);
+        });
+
+        JsonObject resp = new JsonObject();
+        resp.addProperty("success", true);
+        resp.addProperty("id", id);
+        resp.addProperty("message", "Interaction saved and reloaded.");
+        sendJson(exchange, 200, gson.toJson(resp));
+        plugin.getLogger().info("[WebPanel] Interaction saved: " + id + " (by " +
+                exchange.getRequestHeaders().getFirst("Authorization") + ")");
+    }
+
+    private void handleDeleteInteraction(HttpExchange exchange, String id) throws IOException {
+        File file = findInteractionFile(id);
+        if (file == null || !file.exists()) {
+            sendJson(exchange, 404, "{\"error\":\"Interaction not found: " + id + "\"}");
+            return;
+        }
+
+        file.delete();
+
+        // Remove from memory
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            plugin.getInteractionManager().removeInteraction(id);
+        });
+
+        sendJson(exchange, 200, "{\"success\":true,\"message\":\"Interaction deleted: " + id + "\"}");
+        plugin.getLogger().info("[WebPanel] Interaction deleted: " + id);
+    }
+
+    // ─── POST /api/interaction-new ────────────────────────────────────────────
+
+    private void handleCreateNew(HttpExchange exchange, TokenSession.SessionData session) throws IOException {
+        setCorsHeaders(exchange);
         if (!"POST".equals(exchange.getRequestMethod())) {
             sendJson(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
             return;
@@ -141,193 +295,72 @@ public class WebPanelServer {
 
         String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         JsonObject req;
-        try { req = JsonParser.parseString(body).getAsJsonObject(); }
-        catch (Exception e) { sendJson(exchange, 400, "{\"error\":\"Invalid JSON\"}"); return; }
-
-        String username = req.has("username") ? req.get("username").getAsString() : "";
-        String password = req.has("password") ? req.get("password").getAsString() : "";
-
-        if (username.isBlank() || password.isBlank()) {
-            sendJson(exchange, 400, "{\"error\":\"Username dan password wajib diisi\"}");
+        try {
+            req = JsonParser.parseString(body).getAsJsonObject();
+        } catch (Exception e) {
+            sendJson(exchange, 400, "{\"error\":\"Invalid JSON\"}");
             return;
         }
 
-        DatabaseManager db = plugin.getDatabaseManager();
-        if (db == null || !db.isConnected()) {
-            sendJson(exchange, 503, "{\"error\":\"Database tidak terhubung. Aktifkan mysql di config.yml\"}");
+        String id = req.has("id") ? req.get("id").getAsString().trim() : "";
+        if (id.isEmpty()) {
+            sendJson(exchange, 400, "{\"error\":\"Missing interaction ID\"}");
             return;
         }
 
-        DatabaseManager.AdminRecord admin = db.getAdmin(username);
-        if (admin == null || !PasswordUtil.verify(password, admin.passwordHash())) {
-            sendJson(exchange, 401, "{\"error\":\"Username atau password salah\"}");
-            plugin.getLogger().warning("[WebPanel] Failed login attempt for: " + username);
+        // Check if already exists
+        if (plugin.getInteractionManager().hasInteraction(id)) {
+            sendJson(exchange, 409, "{\"error\":\"Interaction already exists: " + id + "\"}");
             return;
         }
 
-        // Generate token
-        String token = PasswordUtil.generateToken();
-        long expire = plugin.getConfig().getLong("webpanel.token-expire-seconds", 28800);
-        long expiresAt = System.currentTimeMillis() + (expire * 1000);
-        db.saveToken(token, admin.id(), expiresAt);
-        db.updateLastLogin(admin.id());
+        // Create default interaction JSON
+        JsonObject interaction = new JsonObject();
+        interaction.addProperty("id", id);
+        interaction.addProperty("rootNodeId", "start");
+        interaction.addProperty("cooldownSeconds", 0);
+        interaction.addProperty("mandatory", false);
+        interaction.addProperty("oneTimeReward", false);
+        interaction.addProperty("dialogueUnicode", "");
+        interaction.addProperty("chapter", req.has("chapter") ? req.get("chapter").getAsString() : "");
+        interaction.addProperty("npcDisplayName", req.has("npcDisplayName") ? req.get("npcDisplayName").getAsString() : "");
 
-        JsonObject resp = new JsonObject();
-        resp.addProperty("token", token);
-        resp.addProperty("username", admin.username());
-        resp.addProperty("role", admin.role());
-        resp.addProperty("expiresIn", expire);
-        sendJson(exchange, 200, gson.toJson(resp));
-        plugin.getLogger().info("[WebPanel] Admin logged in: " + username);
-    }
+        // Default start node
+        JsonObject nodes = new JsonObject();
+        JsonObject startNode = new JsonObject();
+        startNode.addProperty("id", "start");
+        startNode.addProperty("text", "&eHello! Edit this dialogue...");
+        startNode.add("options", new JsonArray());
+        startNode.add("actions", new JsonArray());
+        startNode.addProperty("durationSeconds", 5);
+        startNode.addProperty("skippable", true);
+        startNode.addProperty("giveReward", false);
+        startNode.add("commandRewards", new JsonArray());
+        startNode.addProperty("delayBeforeNext", 20);
+        nodes.add("start", startNode);
+        interaction.add("nodes", nodes);
 
-    // ─── POST /api/auth/logout ────────────────────────────────────────────────
+        interaction.add("rewards", new JsonArray());
+        interaction.add("commandRewards", new JsonArray());
 
-    private void handleLogout(HttpExchange exchange, DatabaseManager.AdminRecord admin) throws IOException {
-        String token = exchange.getRequestHeaders().getFirst("Authorization").substring(7).trim();
-        plugin.getDatabaseManager().deleteToken(token);
-        sendJson(exchange, 200, "{\"message\":\"Logged out\"}");
-    }
+        // Save to file
+        File folder = new File(plugin.getDataFolder(), "interactions");
+        if (!folder.exists()) folder.mkdirs();
+        File file = new File(folder, id + ".json");
+        Files.writeString(file.toPath(), gson.toJson(interaction), StandardCharsets.UTF_8);
 
-    // ─── GET /api/auth/verify ─────────────────────────────────────────────────
+        // Load into memory
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            plugin.getInteractionManager().reloadInteraction(id);
+        });
 
-    private void handleVerify(HttpExchange exchange, DatabaseManager.AdminRecord admin) throws IOException {
-        JsonObject resp = new JsonObject();
-        resp.addProperty("username", admin.username());
-        resp.addProperty("role", admin.role());
-        sendJson(exchange, 200, gson.toJson(resp));
-    }
-
-    // ─── GET /api/interactions ────────────────────────────────────────────────
-
-    private void handleInteractions(HttpExchange exchange, DatabaseManager.AdminRecord admin) throws IOException {
-        Collection<String> ids = plugin.getInteractionManager().getInteractionIds();
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (String id : ids) {
-            Interaction i = plugin.getInteractionManager().getInteraction(id);
-            if (i == null) continue;
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", i.getId());
-            m.put("chapter", i.getChapter());
-            m.put("npcDisplayName", i.getNpcDisplayName());
-            m.put("nodeCount", i.getNodes().size());
-            m.put("rootNodeId", i.getRootNodeId());
-            m.put("cooldownSeconds", i.getCooldownSeconds());
-            m.put("mandatory", i.isMandatory());
-            m.put("oneTimeReward", i.isOneTimeReward());
-            result.add(m);
-        }
-        sendJson(exchange, 200, gson.toJson(result));
-    }
-
-    // ─── GET & POST /api/interactions/file/:id ────────────────────────────────
-
-    private void handleInteractionFile(HttpExchange exchange, DatabaseManager.AdminRecord admin) throws IOException {
-        String method = exchange.getRequestMethod();
-        String path = exchange.getRequestURI().getPath();
-        // path: /api/interactions/file/<id>
-        String[] segments = path.split("/");
-
-        if (segments.length < 5 && method.equals("GET")) {
-            sendJson(exchange, 400, "{\"error\":\"Usage: /api/interactions/file/<id>\"}");
-            return;
-        }
-
-        if (method.equals("GET")) {
-            String id = segments[4];
-            File file = plugin.getInteractionManager().getInteractionFile(id);
-            if (file == null || !file.exists()) {
-                sendJson(exchange, 404, "{\"error\":\"File not found for interaction: " + id + "\"}");
-                return;
-            }
-            try {
-                String content = new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-                sendJson(exchange, 200, content);
-            } catch (Exception e) {
-                sendJson(exchange, 500, "{\"error\":\"Failed to read file: " + e.getMessage() + "\"}");
-            }
-
-        } else if (method.equals("POST")) {
-            // If id is provided, update it. Otherwise, create new boilerplate.
-            String id = segments.length >= 5 ? segments[4] : null;
-            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            
-            try {
-                // Validate it's valid JSON
-                JsonParser.parseString(body);
-            } catch (Exception e) {
-                sendJson(exchange, 400, "{\"error\":\"Invalid JSON format\"}");
-                return;
-            }
-
-            File targetFile;
-            if (id != null) {
-                targetFile = plugin.getInteractionManager().getInteractionFile(id);
-                if (targetFile == null) {
-                    // Create new in root interactions folder
-                    targetFile = new File(plugin.getDataFolder() + "/interactions", id + ".json");
-                }
-            } else {
-                // Fallback if they POST without ID, let's try to extract ID from JSON
-                try {
-                    JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
-                    if (!obj.has("id")) {
-                        sendJson(exchange, 400, "{\"error\":\"JSON must contain an 'id' field\"}");
-                        return;
-                    }
-                    id = obj.get("id").getAsString();
-                    targetFile = plugin.getInteractionManager().getInteractionFile(id);
-                    if (targetFile == null) {
-                        targetFile = new File(plugin.getDataFolder() + "/interactions", id + ".json");
-                    }
-                } catch (Exception e) {
-                    sendJson(exchange, 400, "{\"error\":\"Invalid JSON\"}");
-                    return;
-                }
-            }
-
-            // Write to file
-            try (FileWriter writer = new FileWriter(targetFile)) {
-                writer.write(body);
-            } catch (Exception e) {
-                sendJson(exchange, 500, "{\"error\":\"Failed to write file: " + e.getMessage() + "\"}");
-                return;
-            }
-
-            // Reload interactions to apply changes immediately
-            plugin.getServer().getScheduler().runTask(plugin, () -> {
-                plugin.getInteractionManager().loadInteractions();
-            });
-
-            sendJson(exchange, 200, "{\"message\":\"Saved successfully and reloaded!\"}");
-
-        } else {
-            sendJson(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
-        }
-    }
-
-    // ─── GET /api/chapters ────────────────────────────────────────────────────
-
-    private void handleChapters(HttpExchange exchange, DatabaseManager.AdminRecord admin) throws IOException {
-        Map<String, Object> tree = new LinkedHashMap<>();
-        for (String id : plugin.getInteractionManager().getInteractionIds()) {
-            Interaction i = plugin.getInteractionManager().getInteraction(id);
-            if (i == null) continue;
-            String chapter = i.getChapter().isEmpty() ? "uncategorized" : i.getChapter();
-            String[] parts = chapter.split("\\.");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> current = tree;
-            for (String part : parts) {
-                current = (Map<String, Object>) current.computeIfAbsent(part, k -> new LinkedHashMap<>());
-            }
-            current.put(id, i.getNpcDisplayName().isEmpty() ? id : i.getNpcDisplayName());
-        }
-        sendJson(exchange, 200, gson.toJson(tree));
+        sendJson(exchange, 201, gson.toJson(interaction));
+        plugin.getLogger().info("[WebPanel] New interaction created: " + id);
     }
 
     // ─── GET /api/facts/:uuid ─────────────────────────────────────────────────
 
-    private void handleFacts(HttpExchange exchange, DatabaseManager.AdminRecord admin) throws IOException {
+    private void handleFacts(HttpExchange exchange, TokenSession.SessionData session) throws IOException {
         String path = exchange.getRequestURI().getPath();
         String[] segments = path.split("/");
         if (segments.length < 4) {
@@ -337,82 +370,79 @@ public class WebPanelServer {
         try {
             UUID uuid = UUID.fromString(segments[3]);
             Map<String, String> facts = plugin.getFactsManager().getAll(uuid);
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("uuid", uuid.toString());
-            result.put("count", facts.size());
-            result.put("facts", facts);
+            JsonObject result = new JsonObject();
+            result.addProperty("uuid", uuid.toString());
+            result.addProperty("count", facts.size());
+            JsonObject factsObj = new JsonObject();
+            facts.forEach(factsObj::addProperty);
+            result.add("facts", factsObj);
             sendJson(exchange, 200, gson.toJson(result));
         } catch (IllegalArgumentException e) {
             sendJson(exchange, 400, "{\"error\":\"Invalid UUID\"}");
         }
     }
 
-    // ─── WebSocket (handshake) ────────────────────────────────────────────────
+    // ─── Health / Root ────────────────────────────────────────────────────────
 
-    private void handleWebSocket(HttpExchange exchange) throws IOException {
-        String wsKey = exchange.getRequestHeaders().getFirst("Sec-WebSocket-Key");
-        if (wsKey == null) { sendJson(exchange, 400, "{\"error\":\"Not a WS request\"}"); return; }
-        String acceptKey = computeWebSocketAccept(wsKey);
-        exchange.getResponseHeaders().set("Upgrade", "websocket");
-        exchange.getResponseHeaders().set("Connection", "Upgrade");
-        exchange.getResponseHeaders().set("Sec-WebSocket-Accept", acceptKey);
-        exchange.sendResponseHeaders(101, -1);
-    }
-
-    private String computeWebSocketAccept(String key) {
-        try {
-            String magic = key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-            MessageDigest md = MessageDigest.getInstance("SHA-1");
-            return Base64.getEncoder().encodeToString(
-                    md.digest(magic.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) { return ""; }
-    }
-
-    // ─── Static fallback ──────────────────────────────────────────────────────
-
-    private void handleStatic(HttpExchange exchange) throws IOException {
+    private void handleHealth(HttpExchange exchange) throws IOException {
         setCorsHeaders(exchange);
-        String html = """
-            <!DOCTYPE html>
-            <html><head><meta charset="UTF-8">
-            <title>NaturalInteraction Web Panel</title>
-            <style>body{font-family:sans-serif;background:#0e1117;color:#e6edf3;display:flex;
-            align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column}
-            h1{background:linear-gradient(135deg,#4facfe,#00f2fe);-webkit-background-clip:text;
-            -webkit-text-fill-color:transparent;font-size:2rem}
-            p{color:#8b949e}</style></head>
-            <body>
-            <h1>✦ NaturalInteraction</h1>
-            <p>Panel sedang berjalan. Buka <strong>https://story.naturalsmp.net</strong></p>
-            </body></html>
-            """;
-        sendHtml(exchange, 200, html);
+        JsonObject resp = new JsonObject();
+        resp.addProperty("status", "ok");
+        resp.addProperty("plugin", "NaturalInteraction");
+        resp.addProperty("version", "2.0.0");
+        resp.addProperty("activeSessions", TokenSession.activeCount());
+        sendJson(exchange, 200, gson.toJson(resp));
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
+    private File findInteractionFile(String id) {
+        // Search in interactions/ folder and chapters/ subfolders
+        File folder = new File(plugin.getDataFolder(), "interactions");
+        if (folder.exists()) {
+            File direct = new File(folder, id + ".json");
+            if (direct.exists()) return direct;
+            // Search recursively
+            File found = findFileRecursive(folder, id + ".json");
+            if (found != null) return found;
+        }
+        File chapters = new File(plugin.getDataFolder(), "chapters");
+        if (chapters.exists()) {
+            return findFileRecursive(chapters, id + ".json");
+        }
+        return null;
+    }
+
+    private File findFileRecursive(File dir, String filename) {
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+        for (File f : files) {
+            if (f.isFile() && f.getName().equals(filename)) return f;
+            if (f.isDirectory()) {
+                File found = findFileRecursive(f, filename);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
     private void sendJson(HttpExchange ex, int code, String json) throws IOException {
         byte[] b = json.getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        setCorsHeaders(ex);
         ex.sendResponseHeaders(code, b.length);
-        ex.getResponseBody().write(b);
-        ex.getResponseBody().close();
-    }
-
-    private void sendHtml(HttpExchange ex, int code, String html) throws IOException {
-        byte[] b = html.getBytes(StandardCharsets.UTF_8);
-        ex.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
-        ex.sendResponseHeaders(code, b.length);
-        ex.getResponseBody().write(b);
-        ex.getResponseBody().close();
+        try (OutputStream os = ex.getResponseBody()) {
+            os.write(b);
+        }
     }
 
     private void setCorsHeaders(HttpExchange ex) {
-        ex.getResponseHeaders().set("Access-Control-Allow-Origin", publicUrl);
-        ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        // Allow all origins since API is token-protected
+        String origin = ex.getRequestHeaders().getFirst("Origin");
+        ex.getResponseHeaders().set("Access-Control-Allow-Origin", origin != null ? origin : "*");
+        ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         ex.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
         ex.getResponseHeaders().set("Access-Control-Allow-Credentials", "true");
+        ex.getResponseHeaders().set("Access-Control-Max-Age", "86400");
     }
-
-    public String getPublicUrl() { return publicUrl; }
 }

@@ -47,22 +47,11 @@ public class PasswordUtil {
         }
     }
 
-    /** Generate a random auth token string (long). */
+    /** Generate a random auth token string. */
     public static String generateToken() {
         byte[] bytes = new byte[48];
         new SecureRandom().nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    /** Generate a short 6-character alphanumeric token. */
-    public static String generateShortToken() {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sb = new StringBuilder(6);
-        SecureRandom random = new SecureRandom();
-        for (int i = 0; i < 6; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
-        }
-        return sb.toString();
     }
 
     // ─── Private ──────────────────────────────────────────────────────────────

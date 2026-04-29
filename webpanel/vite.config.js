@@ -5,18 +5,9 @@ export default defineConfig({
   server: {
     port: 4000,
     open: false,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:25809',
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://localhost:25809',
-        ws: true,
-      },
-    },
   },
   preview: {
+    port: 4000,
     allowedHosts: ['story.naturalsmp.net'],
   },
   build: {

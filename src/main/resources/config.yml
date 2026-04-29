@@ -24,19 +24,12 @@ plugins:
 webpanel:
   enabled: true
   port: 25809
-  # URL publik (untuk /ni connect dan CORS)
+  # URL publik website (untuk /ni connect link)
   public-url: "https://story.naturalsmp.net"
-  # Token expire dalam detik (default 8 jam)
-  token-expire-seconds: 28800
-
-# MySQL — hanya perlu dikonfigurasi di sini, web panel pakai API dari plugin
-mysql:
-  enabled: false
-  host: "103.93.129.117"
-  port: 3306
-  database: "naturalsmp_interaction"
-  username: "root"
-  password: "changeme"
-  # HikariCP pool settings
-  pool-size: 5
-  connection-timeout: 30000
+  # URL API backend (plugin HTTP server, diakses dari browser admin)
+  # Kosongkan untuk auto-detect sebagai http://localhost:<port>
+  # Jika pakai Cloudflare Tunnel: "https://api-story.naturalsmp.net"
+  # Jika direct: "http://furina.nexuscloud.id:25809"
+  api-url: "http://furina.nexuscloud.id:25809"
+  # Token expire dalam detik (default 30 menit)
+  token-expire-seconds: 1800

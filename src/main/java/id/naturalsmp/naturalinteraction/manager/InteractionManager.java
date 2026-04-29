@@ -111,25 +111,34 @@ public class InteractionManager {
         });
     }
 
-    public File getInteractionFile(String id) {
-        // Try flat interactions/ folder first
-        File flatFile = new File(interactionsFolder, id + ".json");
-        if (flatFile.exists()) return flatFile;
-
-        // Try searching recursively in chapters/ folder
-        return findFileRecursive(chaptersFolder, id + ".json");
+    /** Reload a single interaction from its JSON file (used by Web Panel after save). */
+    public void reloadInteraction(String id) {
+        // Search in interactions/ folder first
+        File file = new File(interactionsFolder, id + ".json");
+        if (!file.exists()) {
+            // Search recursively in chapters/
+            file = findFileRecursive(chaptersFolder, id + ".json");
+        }
+        if (file != null && file.exists()) {
+            loadSingleFile(file);
+            plugin.getLogger().info("[WebPanel] Reloaded interaction: " + id);
+        }
     }
 
-    private File findFileRecursive(File folder, String targetName) {
-        if (!folder.exists() || !folder.isDirectory()) return null;
-        File[] entries = folder.listFiles();
-        if (entries == null) return null;
-        for (File entry : entries) {
-            if (entry.isDirectory()) {
-                File found = findFileRecursive(entry, targetName);
+    /** Remove an interaction from memory (used by Web Panel after delete). */
+    public void removeInteraction(String id) {
+        interactions.remove(id);
+        plugin.getLogger().info("[WebPanel] Removed interaction from memory: " + id);
+    }
+
+    private File findFileRecursive(File dir, String filename) {
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+        for (File f : files) {
+            if (f.isFile() && f.getName().equals(filename)) return f;
+            if (f.isDirectory()) {
+                File found = findFileRecursive(f, filename);
                 if (found != null) return found;
-            } else if (entry.getName().equals(targetName)) {
-                return entry;
             }
         }
         return null;
