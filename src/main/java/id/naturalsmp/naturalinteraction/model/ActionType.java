@@ -14,6 +14,7 @@ public enum ActionType {
     TAKE_ITEM,      // value: "MATERIAL|ia:id,amount"
     ZOOM,           // value: "true" / "false"
     INVISIBLE,      // value: "true" / "false"
+    CINEMATIC,      // value: "sequence_id"
 
     // ─── Facts System (new) ───────────────────────────────────────────────────
     SET_FACT,           // value: "factKey,value"

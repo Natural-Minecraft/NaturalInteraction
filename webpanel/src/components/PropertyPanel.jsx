@@ -6,13 +6,13 @@ const FLOW_ACTIONS = ['JUMP_IF_TAG','JUMP_IF_NOT_TAG','JUMP_IF_ITEM','JUMP_IF_FA
 const TAG_ACTIONS = ['ADD_TAG','REMOVE_TAG'];
 const FACT_ACTIONS = ['SET_FACT','ADD_FACT','REMOVE_FACT'];
 const NPC_ACTIONS = ['NPC_WALK','NPC_SKIN'];
-const EFFECT_ACTIONS = ['SOUND','SCREENEFFECT','ZOOM','INVISIBLE','SUBTITLE','TITLE','PARTICLE','TELEPORT'];
+const EFFECT_ACTIONS = ['SOUND','SCREENEFFECT','ZOOM','INVISIBLE','SUBTITLE','TITLE','PARTICLE','TELEPORT','CINEMATIC'];
 const COMMAND_ACTIONS = ['COMMAND','ITEM','TAKE_ITEM'];
 
 const FLOW_LABELS = { JUMP_IF_TAG:'Punya tanda', JUMP_IF_NOT_TAG:'Tidak punya tanda', JUMP_IF_ITEM:'Punya item', JUMP_IF_FACT:'Catatan = true', JUMP_IF_NOT_FACT:'Catatan = false' };
 const TAG_LABELS = { ADD_TAG:'＋ Beri tanda', REMOVE_TAG:'－ Hapus tanda' };
 const NPC_LABELS = { NPC_WALK:'NPC berjalan ke', NPC_SKIN:'Ganti skin NPC' };
-const EFFECT_LABELS = { SOUND:'🔊 Suara', SCREENEFFECT:'🖥️ Efek layar', ZOOM:'🔍 Zoom', INVISIBLE:'👻 Invisible', SUBTITLE:'📝 Subtitle', TITLE:'📢 Judul', PARTICLE:'✨ Partikel', TELEPORT:'🌀 Teleport' };
+const EFFECT_LABELS = { SOUND:'🔊 Suara', SCREENEFFECT:'🖥️ Efek layar', ZOOM:'🔍 Zoom', INVISIBLE:'👻 Invisible', SUBTITLE:'📝 Subtitle', TITLE:'📢 Judul', PARTICLE:'✨ Partikel', TELEPORT:'🌀 Teleport', CINEMATIC:'🎥 Cinematic' };
 const CMD_LABELS = { COMMAND:'⚡ Perintah', ITEM:'📦 Beri item', TAKE_ITEM:'🗑️ Ambil item' };
 
 // Category definitions

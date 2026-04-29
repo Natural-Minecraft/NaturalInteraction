@@ -62,6 +62,38 @@ public class CinematicManager {
         loadAll();
     }
 
+    public void saveSequence(CinematicSequence seq) {
+        sequences.put(seq.getId(), seq);
+        File file = new File(cinematicsFolder, seq.getId() + ".json");
+        try (java.io.FileWriter writer = new java.io.FileWriter(file)) {
+            JsonObject root = new JsonObject();
+            root.addProperty("id", seq.getId());
+            root.addProperty("loop", seq.isLoop());
+            root.addProperty("lockMovement", seq.isLockPlayerMovement());
+            root.addProperty("hideHUD", seq.isHideHUD());
+
+            JsonArray points = new JsonArray();
+            for (CameraPoint pt : seq.getPoints()) {
+                JsonObject p = new JsonObject();
+                p.addProperty("world", pt.getLocation().getWorld().getName());
+                p.addProperty("x", pt.getLocation().getX());
+                p.addProperty("y", pt.getLocation().getY());
+                p.addProperty("z", pt.getLocation().getZ());
+                p.addProperty("yaw", pt.getYaw());
+                p.addProperty("pitch", pt.getPitch());
+                p.addProperty("duration", pt.getDurationTicks());
+                p.addProperty("easing", pt.getEasing().name());
+                points.add(p);
+            }
+            root.add("points", points);
+
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            gson.toJson(root, writer);
+        } catch (Exception e) {
+            plugin.getLogger().severe("[Cinematic] Failed to save " + seq.getId() + ": " + e.getMessage());
+        }
+    }
+
     public CinematicSequence getSequence(String id) { return sequences.get(id); }
     public Set<String> getSequenceIds() { return sequences.keySet(); }
     public CinematicPlayer getPlayer() { return player; }

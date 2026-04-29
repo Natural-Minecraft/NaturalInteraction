@@ -103,6 +103,16 @@ public class ActionExecutor {
                         player.setInvisible(false);
                     }
                 }
+                case CINEMATIC -> {
+                    if (plugin != null && plugin.getCinematicManager() != null) {
+                        id.naturalsmp.naturalinteraction.cinematic.CinematicSequence seq = plugin.getCinematicManager().getSequence(value);
+                        if (seq != null) {
+                            plugin.getCinematicManager().getPlayer().play(player, seq);
+                        } else {
+                            Bukkit.getLogger().warning("[NI] Cinematic sequence not found: " + value);
+                        }
+                    }
+                }
 
                 // ─── Items ────────────────────────────────────────────────────
                 case ITEM -> {

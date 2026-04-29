@@ -4,10 +4,12 @@ import { apiFetch } from '../api';
 export default function Dashboard({ session, interactions, onOpenEditor, onRefresh }) {
   const [search, setSearch] = useState('');
   const [activePage, setActivePage] = useState('interactions');
+  const [activeTab, setActiveTab] = useState('ALL');
 
   const filtered = useMemo(() => {
     return interactions
       .filter(i => {
+        if (activeTab !== 'ALL' && i.storyType !== activeTab && !(activeTab === 'MAIN' && !i.storyType)) return false;
         const q = search.toLowerCase();
         return !q || (i.id || '').toLowerCase().includes(q) || (i.npcDisplayName || '').toLowerCase().includes(q) || (i.chapter || '').toLowerCase().includes(q);
       })
@@ -89,9 +91,17 @@ export default function Dashboard({ session, interactions, onOpenEditor, onRefre
 
         {activePage === 'interactions' ? (
           <div className="page-body">
-            <div className="page-header">
-              <h3>All Interactions</h3>
-              <p className="text-muted">Manage dialogue trees, branching stories, and NPC interactions</p>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <h3>All Interactions</h3>
+                <p className="text-muted">Manage dialogue trees, branching stories, and NPC interactions</p>
+              </div>
+              <div className="dashboard-tabs" style={{ display: 'flex', gap: 8 }}>
+                <button className={`btn btn-sm ${activeTab === 'ALL' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('ALL')}>Semua</button>
+                <button className={`btn btn-sm ${activeTab === 'MAIN' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('MAIN')}>Main Story</button>
+                <button className={`btn btn-sm ${activeTab === 'SIDE' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('SIDE')}>Side Quest</button>
+                <button className={`btn btn-sm ${activeTab === 'FREE' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('FREE')}>Bebas</button>
+              </div>
             </div>
             <div className="dashboard-groups">
               {filtered.length === 0 ? (

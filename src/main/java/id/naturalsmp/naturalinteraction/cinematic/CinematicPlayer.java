@@ -3,6 +3,8 @@ package id.naturalsmp.naturalinteraction.cinematic;
 import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -48,7 +50,16 @@ public class CinematicPlayer {
                     PotionEffectType.BLINDNESS, 10, 0, false, false, false));
         }
 
-        ActiveCinematic active = new ActiveCinematic(sequence, originalLocation, originalMode);
+        // Spawn invisible mount for smooth Bedrock cinematic
+        ArmorStand mount = (ArmorStand) originalLocation.getWorld().spawnEntity(originalLocation, EntityType.ARMOR_STAND);
+        mount.setVisible(false);
+        mount.setGravity(false);
+        mount.setMarker(true);
+        mount.setInvulnerable(true);
+        mount.setBasePlate(false);
+        mount.addPassenger(player);
+
+        ActiveCinematic active = new ActiveCinematic(sequence, originalLocation, originalMode, mount);
         activeCinematics.put(player.getUniqueId(), active);
 
         // Start interpolation task
@@ -83,7 +94,13 @@ public class CinematicPlayer {
                         next.getLocation(), next.getYaw(), next.getPitch(),
                         easedProgress);
 
-                player.teleport(interpolated);
+                mount.teleport(interpolated);
+
+                // Force player rotation (ArmorStand passenger rotation sometimes needs manual sync on Java)
+                Location pLoc = player.getLocation();
+                pLoc.setYaw(interpolated.getYaw());
+                pLoc.setPitch(interpolated.getPitch());
+                player.teleport(pLoc);
 
                 ticksInCurrentPoint++;
                 tick++;
@@ -137,6 +154,10 @@ public class CinematicPlayer {
 
     private void restore(Player player, ActiveCinematic active) {
         activeCinematics.remove(player.getUniqueId());
+        if (active.mount != null && active.mount.isValid()) {
+            active.mount.removePassenger(player);
+            active.mount.remove();
+        }
         if (player.isOnline()) {
             player.setGameMode(active.originalMode);
             player.teleport(active.originalLocation);
@@ -171,12 +192,14 @@ public class CinematicPlayer {
         final CinematicSequence sequence;
         final Location originalLocation;
         final GameMode originalMode;
+        final ArmorStand mount;
         BukkitRunnable task;
 
-        ActiveCinematic(CinematicSequence seq, Location loc, GameMode mode) {
+        ActiveCinematic(CinematicSequence seq, Location loc, GameMode mode, ArmorStand mount) {
             this.sequence = seq;
             this.originalLocation = loc;
             this.originalMode = mode;
+            this.mount = mount;
         }
 
         void setTask(BukkitRunnable task) { this.task = task; }
