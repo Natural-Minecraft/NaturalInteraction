@@ -44,11 +44,15 @@ async function verifyToken(token) {
     if (!data.valid) { showLandingError('Token invalid or expired.'); return; }
 
     session = {
-      token: data.token, apiUrl: data.apiUrl || apiUrl,
+      token: data.token,
+      // Always use the locally-discovered apiUrl (from config.json).
+      // Do NOT use data.apiUrl from the plugin — it returns localhost:25809
+      // which is correct on the server but wrong for the browser.
+      apiUrl: apiUrl,
       playerName: data.playerName, playerUUID: data.playerUUID,
       expiresIn: data.expiresIn,
     };
-    sessionStorage.setItem('ni_apiUrl', session.apiUrl);
+    sessionStorage.setItem('ni_apiUrl', apiUrl);
     sessionStorage.setItem('ni_token', session.token);
     window.history.replaceState({}, '', '/');
     showMainApp();
