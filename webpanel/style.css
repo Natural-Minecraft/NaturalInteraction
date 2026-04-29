@@ -61,6 +61,82 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ─── Landing Screen ─────────────────────────────────────── */
+
+.landing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: radial-gradient(ellipse at center, #1c2333 0%, #0e1117 70%);
+}
+
+.landing-card {
+  text-align: center;
+  padding: 48px 40px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 64px rgba(0,0,0,0.5);
+  max-width: 380px;
+  width: 100%;
+}
+
+.landing-logo { margin-bottom: 32px; }
+.landing-icon {
+  font-size: 40px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.landing-logo h1 {
+  font-size: 20px; font-weight: 800; margin-top: 8px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.landing-subtitle {
+  font-size: 13px; color: var(--text-secondary); margin-top: 4px;
+}
+
+.landing-status {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 13px; color: var(--text-secondary);
+}
+.landing-error { color: var(--danger); font-size: 13px; }
+.landing-error code {
+  background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 12px;
+}
+
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Main App Layout ────────────────────────────────────── */
+
+.main-app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.badge-prologue { background: rgba(247, 151, 30, 0.15); color: #f7971e; }
+
+/* ─── Editor mount (full-bleed container) ────────────────── */
+
+.editor-mount {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* ─── App Layout ─────────────────────────────────────────── */
 
 #app {
@@ -507,4 +583,376 @@ html, body {
   .topbar { padding: 0 16px; }
   .page { padding: 16px; }
   .card-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   EDITOR — Visual Node Graph
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Editor page override (full-bleed, no padding) ──────── */
+.page.page-editor {
+  padding: 0;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.page.page-editor.active { display: flex; }
+
+/* ─── Toolbar ────────────────────────────────────────────── */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  min-height: 48px;
+}
+
+.btn-sm {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* ─── Canvas wrapper ─────────────────────────────────────── */
+.editor-canvas-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-primary);
+  min-height: 0;
+}
+
+.editor-canvas-wrap canvas {
+  display: block;
+}
+
+/* ─── Property panel ─────────────────────────────────────── */
+.property-panel {
+  width: 300px;
+  min-width: 280px;
+  max-width: 340px;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.prop-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+/* Header strip */
+.prop-header {
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.prop-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.prop-node-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Scrollable body */
+.prop-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prop-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prop-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+}
+
+.prop-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.prop-input,
+.prop-textarea,
+.prop-select {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-family);
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.prop-input:focus,
+.prop-textarea:focus,
+.prop-select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.prop-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.prop-select {
+  cursor: pointer;
+}
+
+/* MC color preview */
+.mc-preview {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 32px;
+  word-break: break-word;
+}
+
+/* Option / action rows */
+.prop-option-row,
+.prop-action-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 7px;
+  margin-bottom: 4px;
+}
+
+.prop-option-row { flex-wrap: wrap; }
+.prop-option-row .prop-input { flex: 1 1 80px; min-width: 60px; }
+.prop-option-row .prop-select { flex: 1 1 100px; min-width: 80px; }
+
+.prop-action-row .prop-select { flex: 0 0 130px; }
+.prop-action-row .prop-input  { flex: 1; }
+
+.prop-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 2px;
+}
+
+/* Checkbox */
+.prop-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.prop-checkbox input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Tiny add button */
+.btn-tiny {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-active);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.btn-tiny:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Icon delete button */
+.btn-icon {
+  padding: 3px 6px;
+  font-size: 11px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+.btn-icon:hover {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--danger);
+}
+
+/* Danger button (soft) */
+.btn-danger-soft {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.btn-danger-soft:hover {
+  background: rgba(248, 81, 73, 0.2);
+}
+
+/* Footer */
+.prop-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.prop-footer .btn-primary { flex: 1; justify-content: center; padding: 7px 12px; font-size: 12px; }
+.prop-footer .btn-secondary { padding: 7px 10px; font-size: 12px; }
+.prop-footer .btn-danger-soft { padding: 7px 10px; font-size: 13px; }
+
+/* ─── Context menu ───────────────────────────────────────── */
+.editor-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+}
+
+.ctx-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.ctx-item:hover {
+  background: var(--bg-hover);
+}
+
+.ctx-item.danger {
+  color: var(--danger);
+}
+
+.ctx-item.danger:hover {
+  background: rgba(248, 81, 73, 0.12);
+}
+
+/* ─── Toast notifications ────────────────────────────────── */
+.editor-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transform: translateY(16px);
+  opacity: 0;
+  transition: all 0.25s ease;
+  pointer-events: none;
+}
+
+.editor-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.editor-toast.toast-success {
+  border-color: var(--success);
+  color: var(--success);
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.editor-toast.toast-error {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(248, 81, 73, 0.08);
+}
+
+/* ─── Editor legend (optional, shown in toolbar) ─────────── */
+.editor-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 3px;
 }

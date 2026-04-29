@@ -69,7 +69,7 @@
 
       <!-- Main Content -->
       <main class="main-content">
-        <header class="topbar">
+        <header class="topbar" id="topbar">
           <div class="topbar-left">
             <h2 class="page-title" id="page-title">Interactions</h2>
             <span class="breadcrumb" id="breadcrumb">Dashboard / Interactions</span>
@@ -121,49 +121,9 @@
           </div>
         </section>
 
-        <!-- ═══ Node Editor (fullscreen overlay) ═══ -->
-        <section class="page" id="page-editor">
-          <div class="editor-container">
-            <!-- Toolbar -->
-            <div class="editor-toolbar">
-              <button class="btn btn-secondary" id="editor-back">← Back</button>
-              <div class="editor-title">
-                <h3 id="editor-interaction-name">interaction_id</h3>
-                <span class="badge-chapter" id="editor-chapter-badge"></span>
-              </div>
-              <div class="editor-actions">
-                <button class="btn btn-secondary" id="editor-validate">✓ Validate</button>
-                <button class="btn btn-secondary" id="editor-export">⬇ Export</button>
-                <button class="btn btn-primary" id="editor-save">💾 Save</button>
-              </div>
-            </div>
-
-            <!-- Canvas + Property Panel -->
-            <div class="editor-body">
-              <div class="editor-canvas-wrap">
-                <canvas id="editor-canvas"></canvas>
-                <!-- Context Menu -->
-                <div class="context-menu" id="context-menu" style="display:none">
-                  <button data-action="add-dialogue">📝 Add Dialogue Node</button>
-                  <button data-action="add-choice">🔀 Add Choice Node</button>
-                  <button data-action="add-action">⚡ Add Action Node</button>
-                  <button data-action="add-condition">🔴 Add Condition Node</button>
-                  <hr />
-                  <button data-action="auto-layout">📐 Auto Layout</button>
-                  <button data-action="fit-view">🔍 Fit to View</button>
-                </div>
-                <!-- Mini-map -->
-                <canvas id="editor-minimap" class="editor-minimap"></canvas>
-              </div>
-
-              <!-- Property Panel (right side) -->
-              <div class="property-panel" id="property-panel">
-                <div class="property-empty">
-                  <p class="text-muted">Select a node to edit its properties</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <!-- ═══ Node Editor ═══ -->
+        <section class="page page-editor" id="page-editor">
+          <div id="editor-mount" class="editor-mount"></div>
         </section>
 
       </main>
