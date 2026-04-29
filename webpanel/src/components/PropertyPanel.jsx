@@ -8,7 +8,7 @@ const ACTION_TYPES = [
   'SUBTITLE','TITLE','PARTICLE','TELEPORT','NPC_WALK','NPC_SKIN',
 ];
 
-export default function PropertyPanel({ node, allNodeIds, rootNodeId, onUpdate, onDelete, onSetRoot }) {
+export default function PropertyPanel({ node, allNodeIds, rootNodeId, onUpdate, onDelete, onSetRoot, onDuplicate }) {
   if (!node) {
     return (
       <div className="prop-panel">
@@ -195,8 +195,12 @@ export default function PropertyPanel({ node, allNodeIds, rootNodeId, onUpdate, 
 
       <div className="prop-footer">
         <button className="btn btn-primary" style={{ flex: 1 }} onClick={apply}>✓ Apply</button>
+        <button className="btn btn-secondary" onClick={onDuplicate} title="Duplicate node">📋</button>
         <button className="btn btn-secondary" onClick={onSetRoot} title="Set as root">⭐</button>
-        <button className="btn btn-danger" onClick={onDelete}>🗑</button>
+        <button className="btn btn-danger" onClick={onDelete} title="Delete (Del)">🗑</button>
+      </div>
+      <div className="prop-shortcuts">
+        <span>Ctrl+S save</span><span>Ctrl+Z undo</span><span>Del delete</span>
       </div>
     </div>
   );

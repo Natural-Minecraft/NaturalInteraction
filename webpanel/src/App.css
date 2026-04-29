@@ -188,53 +188,123 @@ html, body, #root {
 /* ═══ EDITOR ═══════════════════════════════════════ */
 .editor-layout { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .editor-toolbar {
-  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  display: flex; align-items: center; gap: 6px; padding: 8px 14px;
   background: var(--bg-secondary); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .editor-title { font-weight: 700; font-size: 14px; color: var(--accent); }
-.toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+.editor-npc { font-size: 12px; color: var(--text-secondary); margin-left: -2px; }
+.toolbar-sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
 .dirty-indicator { color: var(--warning); font-size: 12px; margin-right: 8px; animation: pulse 1.5s infinite; }
+
+.editor-stats {
+  display: flex; gap: 10px; font-size: 11px; color: var(--text-muted); font-weight: 500;
+}
+.stat-error { color: var(--danger); }
+.stat-warn { color: var(--warning); }
+
+.editor-search-bar {
+  display: flex; gap: 6px; padding: 6px 14px; background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.editor-search-bar .prop-input { flex: 1; max-width: 400px; }
 
 .editor-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 .editor-canvas { flex: 1; min-width: 0; }
 
 /* ─── React Flow Custom Nodes ──────────────────────── */
 .flow-node {
-  min-width: 220px; max-width: 260px; border: 1px solid;
+  min-width: 230px; max-width: 270px; border: 1px solid;
   border-radius: 10px; overflow: hidden; font-family: var(--font-family);
-  transition: box-shadow 200ms;
+  transition: box-shadow 200ms, border-color 200ms;
+  backdrop-filter: blur(4px);
 }
 .flow-node.selected { z-index: 10; }
 .flow-node-header {
-  padding: 5px 10px; display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; display: flex; align-items: center; justify-content: space-between;
 }
 .flow-root-badge {
-  font-size: 9px; font-weight: 700; color: #ffd200; background: rgba(255,210,0,0.15);
-  padding: 1px 6px; border-radius: 4px;
+  font-size: 9px; font-weight: 700; color: #ffd200; background: rgba(255,210,0,0.18);
+  padding: 2px 6px; border-radius: 4px; letter-spacing: 0.3px;
 }
+.flow-lock-badge { font-size: 10px; opacity: 0.7; }
 .flow-node-body { padding: 8px 10px 10px; }
-.flow-node-id { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); margin-bottom: 4px; }
-.flow-node-text { font-size: 11px; color: #c9d1d9; margin-bottom: 6px; line-height: 1.4; }
-.flow-node-options { display: flex; flex-direction: column; gap: 3px; }
-.flow-node-opt {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 3px 6px; background: rgba(63,185,80,0.08); border-radius: 4px;
-  font-size: 10px; color: #3fb950;
+.flow-node-id {
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary);
+  margin-bottom: 4px; opacity: 0.8;
 }
-.flow-node-badge { font-size: 10px; margin-top: 6px; }
+.flow-node-text {
+  font-size: 11px; color: #c9d1d9; margin-bottom: 6px; line-height: 1.4;
+  word-break: break-word;
+}
+.flow-node-duration {
+  font-size: 9px; color: var(--text-muted); margin-bottom: 4px;
+}
+.flow-node-options { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.flow-node-opt {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 6px; background: rgba(63,185,80,0.08); border-radius: 4px;
+  border: 1px solid rgba(63,185,80,0.15);
+  font-size: 10px; color: #3fb950; transition: background 150ms;
+}
+.flow-opt-arrow { font-size: 8px; opacity: 0.6; }
+.flow-opt-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-node-actions { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+.flow-action-pill {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  padding: 1px 5px; border: 1px solid; border-radius: 3px; letter-spacing: 0.3px;
+}
+.flow-action-more { font-size: 9px; color: var(--text-muted); }
+.flow-node-reward {
+  display: flex; align-items: center; gap: 4px; margin-top: 6px;
+  font-size: 10px; color: #ffd200;
+}
 
 /* React Flow handles */
-.flow-handle { width: 10px !important; height: 10px !important; border-radius: 50% !important; }
+.flow-handle {
+  width: 10px !important; height: 10px !important; border-radius: 50% !important;
+  transition: transform 150ms, box-shadow 150ms;
+}
+.flow-handle:hover { transform: scale(1.4); }
 .flow-handle-in { background: #484f58 !important; border: 2px solid #8b949e !important; }
-.flow-handle-out { background: #4facfe !important; border: none !important; box-shadow: 0 0 6px #4facfe55; }
-.flow-handle-opt { background: #3fb950 !important; border: none !important; box-shadow: 0 0 6px #3fb95055; }
+.flow-handle-out {
+  background: #4facfe !important; border: none !important;
+  box-shadow: 0 0 6px #4facfe55;
+}
+.flow-handle-opt {
+  background: #3fb950 !important; border: none !important;
+  box-shadow: 0 0 6px #3fb95055;
+}
 
 /* React Flow overrides */
 .react-flow__edge-path { stroke-width: 2; }
-.react-flow__controls { background: var(--bg-secondary) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; }
-.react-flow__controls-button { background: var(--bg-secondary) !important; fill: var(--text-primary) !important; border-bottom: 1px solid var(--border) !important; }
+.react-flow__controls {
+  background: var(--bg-secondary) !important; border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+}
+.react-flow__controls-button {
+  background: var(--bg-secondary) !important; fill: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
 .react-flow__controls-button:hover { background: var(--bg-hover) !important; }
 .react-flow__minimap { border-radius: 8px !important; }
+.react-flow__edge.animated path { animation-duration: 1.5s; }
+
+/* ─── Validation Panel ─────────────────────────────── */
+.validation-panel {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px; min-width: 240px; max-width: 320px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3); font-size: 11px;
+}
+.validation-header {
+  font-weight: 700; color: var(--warning); margin-bottom: 6px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.validation-item {
+  padding: 3px 0; color: var(--text-secondary); word-break: break-word;
+}
+.validation-error { color: var(--danger); }
+.validation-warn { color: var(--warning); }
+.validation-info { color: var(--text-muted); }
 
 /* ─── Property Panel ───────────────────────────────── */
 .prop-panel {
@@ -297,6 +367,10 @@ select.prop-input { cursor: pointer; }
   gap: 8px; background: var(--bg-secondary); flex-shrink: 0;
 }
 .prop-footer .btn { font-size: 12px; padding: 7px 12px; justify-content: center; }
+.prop-shortcuts {
+  display: flex; gap: 12px; justify-content: center; padding: 6px;
+  font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border);
+}
 
 /* ─── Toast ────────────────────────────────────────── */
 .toast {
@@ -322,3 +396,4 @@ select.prop-input { cursor: pointer; }
   .card-grid { grid-template-columns: 1fr; }
   .prop-panel { width: 100%; }
 }
+
