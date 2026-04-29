@@ -336,7 +336,17 @@ html, body, #root {
 }
 .prop-input:focus, .prop-textarea:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--accent-glow); }
 .prop-textarea { resize: vertical; min-height: 60px; font-family: var(--font-mono); font-size: 11px; }
-select.prop-input { cursor: pointer; }
+select.prop-input {
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  padding-right: 28px;
+}
+select.prop-input option {
+  background: #1c2333; color: #e6edf3; padding: 8px 10px;
+}
+select.prop-input option:checked { background: #2d5a8e; }
+select.prop-input option:hover { background: #252d3a; }
 .mc-preview {
   background: #000; border: 1px solid var(--border); border-radius: 6px;
   padding: 6px 10px; font-family: var(--font-mono); font-size: 12px; min-height: 28px;
