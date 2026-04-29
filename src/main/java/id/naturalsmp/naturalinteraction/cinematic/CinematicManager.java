@@ -6,9 +6,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+
 import java.io.File;
 import java.io.FileReader;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages cinematic sequences — loads from JSON, provides access, delegates playback.
@@ -25,11 +30,12 @@ import java.util.*;
  *   ]
  * }
  */
-public class CinematicManager {
+public class CinematicManager implements Listener {
 
     private final NaturalInteraction plugin;
     private final File cinematicsFolder;
     private final Map<String, CinematicSequence> sequences = new HashMap<>();
+    private final Map<UUID, CinematicEditorSession> editors = new ConcurrentHashMap<>();
     private final CinematicPlayer player;
 
     public CinematicManager(NaturalInteraction plugin) {
@@ -37,6 +43,7 @@ public class CinematicManager {
         this.cinematicsFolder = new File(plugin.getDataFolder(), "cinematics");
         if (!cinematicsFolder.exists()) cinematicsFolder.mkdirs();
         this.player = new CinematicPlayer(plugin);
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
         loadAll();
     }
 
@@ -83,6 +90,7 @@ public class CinematicManager {
                 p.addProperty("pitch", pt.getPitch());
                 p.addProperty("duration", pt.getDurationTicks());
                 p.addProperty("easing", pt.getEasing().name());
+                if (pt.getText() != null && !pt.getText().isEmpty()) p.addProperty("text", pt.getText());
                 points.add(p);
             }
             root.add("points", points);
@@ -100,6 +108,34 @@ public class CinematicManager {
 
     public void cleanup() {
         player.cleanup();
+        for (CinematicEditorSession session : editors.values()) session.end();
+        editors.clear();
+    }
+
+    public CinematicEditorSession getEditor(org.bukkit.entity.Player p) { return editors.get(p.getUniqueId()); }
+    public void startEditor(org.bukkit.entity.Player p, String id) {
+        if (editors.containsKey(p.getUniqueId())) return;
+        CinematicSequence seq = getSequence(id);
+        if (seq == null) seq = new CinematicSequence(id);
+        CinematicEditorSession session = new CinematicEditorSession(plugin, p, seq);
+        editors.put(p.getUniqueId(), session);
+        session.start();
+    }
+    public void stopEditor(org.bukkit.entity.Player p) {
+        CinematicEditorSession session = editors.remove(p.getUniqueId());
+        if (session != null) {
+            saveSequence(session.getSequence());
+            session.end();
+        }
+    }
+
+    @EventHandler
+    public void onSwapHand(PlayerSwapHandItemsEvent event) {
+        CinematicEditorSession session = editors.get(event.getPlayer().getUniqueId());
+        if (session != null) {
+            event.setCancelled(true);
+            new id.naturalsmp.naturalinteraction.gui.PointEditorGUI(plugin, event.getPlayer(), session.getSequence()).open();
+        }
     }
 
     // ─── Parsing ──────────────────────────────────────────────────────────────
@@ -130,11 +166,12 @@ public class CinematicManager {
                 float pitch = p.has("pitch") ? p.get("pitch").getAsFloat() : 0;
                 int duration = p.has("duration") ? p.get("duration").getAsInt() : 40;
                 String easingStr = p.has("easing") ? p.get("easing").getAsString() : "LINEAR";
+                String text = p.has("text") ? p.get("text").getAsString() : null;
                 CameraPoint.EasingType easing;
                 try { easing = CameraPoint.EasingType.valueOf(easingStr.toUpperCase()); }
                 catch (Exception e) { easing = CameraPoint.EasingType.LINEAR; }
 
-                seq.addPoint(new CameraPoint(loc, yaw, pitch, duration, easing));
+                seq.addPoint(new CameraPoint(loc, yaw, pitch, duration, easing, text));
             }
         }
 

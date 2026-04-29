@@ -251,32 +251,26 @@ public class NiCommand implements CommandExecutor, TabCompleter {
                 cm.getPlayer().stop(t);
                 sender.sendMessage(ChatUtils.toComponent("&a✔ Stopped cinematic for &e" + t.getName()));
             }
-            case "addpoint" -> {
+            case "edit" -> {
                 if (!(sender instanceof Player p)) {
                     sender.sendMessage(ChatUtils.toComponent("&cHarus dari ingame."));
                     return;
                 }
                 if (args.length < 3) {
-                    sender.sendMessage(ChatUtils.toComponent("&c/ni cinematic addpoint <id> [durationTicks] [easing]"));
+                    sender.sendMessage(ChatUtils.toComponent("&c/ni cinematic edit <id>"));
                     return;
                 }
-                String id = args[2];
-                CinematicSequence seq = cm.getSequence(id);
-                if (seq == null) seq = new CinematicSequence(id);
-                
-                int duration = args.length > 3 ? Integer.parseInt(args[3]) : 40;
-                String easingStr = args.length > 4 ? args[4].toUpperCase() : "SMOOTH";
-                id.naturalsmp.naturalinteraction.cinematic.CameraPoint.EasingType easing;
-                try { easing = id.naturalsmp.naturalinteraction.cinematic.CameraPoint.EasingType.valueOf(easingStr); }
-                catch (Exception e) { easing = id.naturalsmp.naturalinteraction.cinematic.CameraPoint.EasingType.SMOOTH; }
-                
-                seq.addPoint(new id.naturalsmp.naturalinteraction.cinematic.CameraPoint(
-                        p.getLocation(), p.getLocation().getYaw(), p.getLocation().getPitch(), duration, easing
-                ));
-                cm.saveSequence(seq);
-                sender.sendMessage(ChatUtils.toComponent("&a✔ Titik kamera ditambahkan ke cinematic &e" + id + " &a(#" + seq.getPoints().size() + ")"));
+                cm.startEditor(p, args[2]);
             }
-            default -> sender.sendMessage(ChatUtils.toComponent("&c/ni cinematic <start|stop|addpoint> [args]"));
+            case "save" -> {
+                if (!(sender instanceof Player p)) return;
+                if (cm.getEditor(p) == null) {
+                    sender.sendMessage(ChatUtils.toComponent("&cKamu tidak sedang mengedit cinematic."));
+                    return;
+                }
+                cm.stopEditor(p);
+            }
+            default -> sender.sendMessage(ChatUtils.toComponent("&c/ni cinematic <start|stop|edit|save> [args]"));
         }
     }
 
@@ -380,12 +374,9 @@ public class NiCommand implements CommandExecutor, TabCompleter {
             }
             case "clearchat", "untrack" -> { return onlinePlayers(args[args.length - 1]); }
             case "cinematic" -> {
-                if (args.length == 2) return List.of("start", "stop", "addpoint");
-                if (args.length == 3 && (args[1].equalsIgnoreCase("start") || args[1].equalsIgnoreCase("addpoint")))
+                if (args.length == 2) return List.of("start", "stop", "edit", "save");
+                if (args.length == 3 && (args[1].equalsIgnoreCase("start") || args[1].equalsIgnoreCase("edit")))
                     return new ArrayList<>(plugin.getCinematicManager().getSequenceIds());
-                if (args.length == 4 && args[1].equalsIgnoreCase("addpoint")) return List.of("40", "60", "100", "200");
-                if (args.length == 5 && args[1].equalsIgnoreCase("addpoint"))
-                    return Arrays.stream(id.naturalsmp.naturalinteraction.cinematic.CameraPoint.EasingType.values()).map(Enum::name).collect(Collectors.toList());
                 return onlinePlayers(args[args.length - 1]);
             }
             case "manifest" -> {

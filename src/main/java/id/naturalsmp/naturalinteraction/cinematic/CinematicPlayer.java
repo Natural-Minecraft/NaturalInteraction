@@ -81,29 +81,51 @@ public class CinematicPlayer {
                         ? points.get(pointIndex + 1)
                         : (sequence.isLoop() ? points.get(0) : current);
 
-                // Progress within this point (0.0 → 1.0)
-                float progress = current.getDurationTicks() > 0
-                        ? (float) ticksInCurrentPoint / current.getDurationTicks() : 1.0f;
+                // Display subtitle text at the start of the point
+                if (ticksInCurrentPoint == 0 && current.getText() != null && !current.getText().isEmpty()) {
+                    player.sendActionBar(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent(current.getText()));
+                }
 
-                // Apply easing
-                float easedProgress = applyEasing(progress, current.getEasing());
+                // Handle Cross-World: Instant teleport
+                if (!current.getLocation().getWorld().equals(next.getLocation().getWorld())) {
+                    if (ticksInCurrentPoint == 0) {
+                        mount.teleport(current.getLocation());
+                        player.teleport(current.getLocation());
+                    }
+                    if (ticksInCurrentPoint >= current.getDurationTicks() - 1) {
+                        mount.teleport(next.getLocation());
+                        player.teleport(next.getLocation());
+                        ticksInCurrentPoint = current.getDurationTicks(); // Force advance
+                    } else {
+                        ticksInCurrentPoint++;
+                        tick++;
+                        return;
+                    }
+                } else {
+                    // Progress within this point (0.0 → 1.0)
+                    float progress = current.getDurationTicks() > 0
+                            ? (float) ticksInCurrentPoint / current.getDurationTicks() : 1.0f;
 
-                // Interpolate location
-                Location interpolated = interpolate(
-                        current.getLocation(), current.getYaw(), current.getPitch(),
-                        next.getLocation(), next.getYaw(), next.getPitch(),
-                        easedProgress);
+                    // Apply easing
+                    float easedProgress = applyEasing(progress, current.getEasing());
 
-                mount.teleport(interpolated);
+                    // Interpolate location
+                    Location interpolated = interpolate(
+                            current.getLocation(), current.getYaw(), current.getPitch(),
+                            next.getLocation(), next.getYaw(), next.getPitch(),
+                            easedProgress);
 
-                // Force player rotation (ArmorStand passenger rotation sometimes needs manual sync on Java)
-                Location pLoc = player.getLocation();
-                pLoc.setYaw(interpolated.getYaw());
-                pLoc.setPitch(interpolated.getPitch());
-                player.teleport(pLoc);
+                    mount.teleport(interpolated);
 
-                ticksInCurrentPoint++;
-                tick++;
+                    // Force player rotation
+                    Location pLoc = player.getLocation();
+                    pLoc.setYaw(interpolated.getYaw());
+                    pLoc.setPitch(interpolated.getPitch());
+                    player.teleport(pLoc);
+
+                    ticksInCurrentPoint++;
+                    tick++;
+                }
 
                 if (ticksInCurrentPoint >= current.getDurationTicks()) {
                     // Move to next point
