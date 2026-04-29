@@ -19,6 +19,7 @@ export default function Editor({ data: interactionData, onBack }) {
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
   const searchRef = useRef(null);
@@ -238,9 +239,10 @@ export default function Editor({ data: interactionData, onBack }) {
     <div className="editor-layout">
       {/* Toolbar */}
       <div className="editor-toolbar">
-        <button className="btn btn-secondary btn-sm" onClick={() => { if (dirty && !confirm('Unsaved changes. Leave?')) return; onBack(); }}>← Back</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => { if (dirty && !confirm('Unsaved changes. Leave?')) return; onBack(); }}>← Kembali</button>
         <span className="editor-title">🌿 {interaction.id}</span>
         <span className="editor-npc">{interaction.npcDisplayName || ''}</span>
+        <button className="btn-icon" style={{ marginLeft: 4 }} onClick={() => setShowSettings(true)} title="Pengaturan Interaksi">⚙️</button>
         <div className="toolbar-sep" />
         <button className="btn btn-secondary btn-sm" onClick={() => addNode('DIALOGUE')}>💬</button>
         <button className="btn btn-secondary btn-sm" onClick={() => addNode('CHOICE')}>🔀</button>
@@ -313,6 +315,48 @@ export default function Editor({ data: interactionData, onBack }) {
       </div>
 
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>⚙️ Pengaturan Interaksi</h3>
+              <button className="btn-icon" onClick={() => setShowSettings(false)}>✕</button>
+            </div>
+            <div className="modal-body prop-body">
+              <div className="prop-section">
+                <label className="prop-label">Nama NPC / Judul</label>
+                <input className="prop-input" value={interaction.npcDisplayName || ''} onChange={e => mutate(d => { d.npcDisplayName = e.target.value; })} />
+              </div>
+              <div className="prop-row-2">
+                <div className="prop-section">
+                  <label className="prop-label">Chapter</label>
+                  <input className="prop-input" placeholder="Bab 1: Awal..." value={interaction.chapter || ''} onChange={e => mutate(d => { d.chapter = e.target.value; })} />
+                </div>
+                <div className="prop-section">
+                  <label className="prop-label">Tipe Cerita</label>
+                  <select className="prop-input" value={interaction.storyType || 'MAIN'} onChange={e => mutate(d => { d.storyType = e.target.value; })}>
+                    <option value="MAIN">Utama (Main Story)</option>
+                    <option value="SIDE">Sampingan (Side Quest)</option>
+                    <option value="FREE">Bebas (Eksplorasi)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="prop-row-2">
+                <div className="prop-section">
+                  <label className="prop-label">Cooldown (detik)</label>
+                  <input className="prop-input" type="number" value={interaction.cooldownSeconds || 0} onChange={e => mutate(d => { d.cooldownSeconds = +e.target.value; })} />
+                </div>
+                <div className="prop-section" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, paddingTop: 14 }}>
+                  <label className="prop-checkbox"><input type="checkbox" checked={!!interaction.mandatory} onChange={e => mutate(d => { d.mandatory = e.target.checked; })} /><span>Wajib (Mandatory)</span></label>
+                  <label className="prop-checkbox"><input type="checkbox" checked={!!interaction.oneTimeReward} onChange={e => mutate(d => { d.oneTimeReward = e.target.checked; })} /><span>Hadiah 1x saja</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

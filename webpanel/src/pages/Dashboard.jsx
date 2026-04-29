@@ -1,20 +1,41 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { apiFetch } from '../api';
 
 export default function Dashboard({ session, interactions, onOpenEditor, onRefresh }) {
   const [search, setSearch] = useState('');
   const [activePage, setActivePage] = useState('interactions');
 
-  const filtered = interactions
-    .filter(i => {
-      const q = search.toLowerCase();
-      return !q || (i.id || '').toLowerCase().includes(q) || (i.npcDisplayName || '').toLowerCase().includes(q);
-    })
-    .sort((a, b) => {
-      if (a.isPrologue) return -1;
-      if (b.isPrologue) return 1;
-      return (a.id || '').localeCompare(b.id || '');
+  const filtered = useMemo(() => {
+    return interactions
+      .filter(i => {
+        const q = search.toLowerCase();
+        return !q || (i.id || '').toLowerCase().includes(q) || (i.npcDisplayName || '').toLowerCase().includes(q) || (i.chapter || '').toLowerCase().includes(q);
+      })
+      .sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+  }, [interactions, search]);
+
+  const grouped = useMemo(() => {
+    const groups = {};
+    filtered.forEach(i => {
+      let cat = i.chapter ? i.chapter.trim() : '';
+      if (i.isPrologue) cat = '🌟 Prologue';
+      else if (!cat) {
+        if (i.storyType === 'SIDE') cat = '📜 Side Quests';
+        else if (i.storyType === 'FREE') cat = '🧭 Eksplorasi Bebas';
+        else cat = '📁 Tanpa Kategori (Main)';
+      } else {
+        cat = '📖 ' + cat;
+      }
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(i);
     });
+    // Sort keys logically
+    return Object.keys(groups).sort((a, b) => {
+      if (a.includes('Prologue')) return -1;
+      if (b.includes('Prologue')) return 1;
+      return a.localeCompare(b);
+    }).map(k => ({ title: k, items: groups[k] }));
+  }, [filtered]);
 
   async function createNew() {
     const id = prompt('Enter interaction ID (lowercase, underscore):');
@@ -72,14 +93,19 @@ export default function Dashboard({ session, interactions, onOpenEditor, onRefre
               <h3>All Interactions</h3>
               <p className="text-muted">Manage dialogue trees, branching stories, and NPC interactions</p>
             </div>
-            <div className="card-grid">
+            <div className="dashboard-groups">
               {filtered.length === 0 ? (
                 <div className="card card-empty">
                   <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
-                  <p>No interactions found</p>
+                  <p>Tidak ada interaksi ditemukan</p>
                 </div>
-              ) : filtered.map(i => (
-                <InteractionCard key={i.id} data={i} onClick={() => onOpenEditor(i.id)} />
+              ) : grouped.map(g => (
+                <div key={g.title} className="dashboard-group">
+                  <h4 className="group-title">{g.title} <span className="group-count">{g.items.length}</span></h4>
+                  <div className="card-grid">
+                    {g.items.map(i => <InteractionCard key={i.id} data={i} onClick={() => onOpenEditor(i.id)} />)}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -93,19 +119,19 @@ export default function Dashboard({ session, interactions, onOpenEditor, onRefre
 
 function InteractionCard({ data, onClick }) {
   const chapter = (data.chapter || '').replace(/^\.+/, '').trim();
+  const typeMap = { MAIN: 'Utama', SIDE: 'Side Quest', FREE: 'Bebas' };
   return (
     <div className="card" onClick={onClick}>
       <div className="card-title">{data.npcDisplayName || data.id}</div>
       <div className="card-subtitle">{data.id}</div>
       <div className="card-badges">
-        {data.isPrologue && <span className="badge badge-prologue">🌟 Prologue</span>}
-        {chapter && <span className="badge badge-chapter">📖 {chapter}</span>}
-        {data.mandatory && <span className="badge badge-mandatory">⚠ Mandatory</span>}
-        {data.oneTimeReward && <span className="badge badge-complete">⭐ One-time</span>}
+        {data.storyType && <span className="badge badge-chapter">{typeMap[data.storyType] || data.storyType}</span>}
+        {data.mandatory && <span className="badge badge-mandatory">⚠ Wajib</span>}
+        {data.oneTimeReward && <span className="badge badge-complete">⭐ 1x Reward</span>}
       </div>
       <div className="card-meta">
-        <span>📄 {data.nodeCount || 0} nodes</span>
-        <span>⏱ {data.cooldownSeconds || 0}s</span>
+        <span>📄 {data.nodeCount || Object.keys(data.nodes || {}).length || 0} node</span>
+        <span>⏱ {data.cooldownSeconds || 0}s cooldown</span>
       </div>
     </div>
   );
