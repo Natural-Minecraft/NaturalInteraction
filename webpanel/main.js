@@ -164,9 +164,11 @@ function renderInteractions() {
   grid.innerHTML = sorted.map(i => {
     const badges = [];
     if (i.isPrologue) badges.push(`<span class="card-badge badge-prologue">🌟 Prologue</span>`);
-    if (i.chapter) badges.push(`<span class="card-badge badge-chapter">${esc(i.chapter)}</span>`);
-    if (i.mandatory) badges.push(`<span class="card-badge badge-mandatory">Mandatory</span>`);
-    if (i.oneTimeReward) badges.push(`<span class="card-badge badge-complete">One-time</span>`);
+    // Chapter — strip leading dots (e.g. "...interactions" → "interactions")
+    const chapterLabel = (i.chapter || '').replace(/^\.+/, '').trim();
+    if (chapterLabel) badges.push(`<span class="card-badge badge-chapter">📖 ${esc(chapterLabel)}</span>`);
+    if (i.mandatory) badges.push(`<span class="card-badge badge-mandatory">⚠ Mandatory</span>`);
+    if (i.oneTimeReward) badges.push(`<span class="card-badge badge-complete">⭐ One-time</span>`);
     return `
       <div class="card" data-id="${esc(i.id)}" onclick="window.__openEditor('${esc(i.id)}')">
         <div class="card-title">${esc(i.npcDisplayName || i.id)}</div>

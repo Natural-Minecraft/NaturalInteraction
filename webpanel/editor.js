@@ -866,5 +866,6 @@ export function initEditor(interactionData, session, apiFetch) {
   }
 
   // Init
-  setTimeout(fitView, 120);
+  // Init — wait for ResizeObserver to give canvas proper dimensions
+  setTimeout(fitView, 300);
 }
