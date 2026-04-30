@@ -1,5 +1,6 @@
 package id.naturalsmp.naturalinteraction.prologue;
 
+import id.naturalsmp.naturalinteraction.NaturalInteraction;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
