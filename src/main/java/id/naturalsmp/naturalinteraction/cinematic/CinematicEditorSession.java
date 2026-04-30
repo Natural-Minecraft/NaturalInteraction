@@ -6,6 +6,8 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import net.kyori.adventure.text.Component;
 
 public class CinematicEditorSession {
@@ -25,7 +27,10 @@ public class CinematicEditorSession {
     }
 
     public void start() {
-        player.setGameMode(GameMode.SPECTATOR);
+        player.setGameMode(GameMode.ADVENTURE);
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false, false, false));
         player.sendMessage(ChatUtils.toComponent("&a✔ Memasuki Editor Cinematic: &e" + sequence.getId()));
         player.sendMessage(ChatUtils.toComponent("&7- Terbang ke lokasi kamera."));
         player.sendMessage(ChatUtils.toComponent("&7- Tekan &e[F] &7(Swap Item) untuk menyimpan titik kamera."));
@@ -44,7 +49,12 @@ public class CinematicEditorSession {
     public void end() {
         if (actionbarTask != null) actionbarTask.cancel();
         if (player.isOnline()) {
+            player.removePotionEffect(PotionEffectType.INVISIBILITY);
             player.setGameMode(originalMode);
+            if (originalMode != GameMode.CREATIVE && originalMode != GameMode.SPECTATOR) {
+                player.setAllowFlight(false);
+                player.setFlying(false);
+            }
             player.teleport(originalLoc);
             player.sendMessage(ChatUtils.toComponent("&a✔ Keluar dari Editor Cinematic."));
         }
