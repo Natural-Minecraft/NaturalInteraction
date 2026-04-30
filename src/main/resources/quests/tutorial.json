@@ -5,15 +5,23 @@
   "stages": {
     "intro": {
       "id": "intro",
-      "objective": "Ikuti arahan di Lobby"
+      "objective": "Tunggu intro selesai"
     },
     "talk_guide": {
       "id": "talk_guide",
-      "objective": "Bicara dengan Guide di Lobby"
+      "objective": "Bicara dengan Guide"
     },
     "claim_land": {
       "id": "claim_land",
-      "objective": "Buat 1 Claim Land pertamamu"
+      "objective": "Buat 1 Claim Land pertamamu (Gunakan Golden Shovel)"
+    },
+    "goto_start": {
+      "id": "goto_start",
+      "objective": "Temui NPC Start Adventure untuk pindah ke Survival"
+    },
+    "talk_rudy": {
+      "id": "talk_rudy",
+      "objective": "Bicara dengan Rudy di Dunia Survival"
     }
   }
 }

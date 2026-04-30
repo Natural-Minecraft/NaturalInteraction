@@ -342,29 +342,53 @@ public class NiCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(ChatUtils.toComponent("&e[System] Cinematic 'lobby_intro' tidak ditemukan, menggunakan fallback cutscene."));
         }
         
-        org.bukkit.Location spawnLoc = player.getLocation().add(player.getLocation().getDirection().multiply(10));
-        net.citizensnpcs.api.npc.NPC guide;
-        try {
-            guide = net.citizensnpcs.api.CitizensAPI.getNPCRegistry().createNPC(org.bukkit.entity.EntityType.PLAYER, "Guide");
-            guide.spawn(spawnLoc);
-            guide.getNavigator().setTarget(player, true);
-        } catch (NoClassDefFoundError e) {
-            player.sendMessage(ChatUtils.toComponent("&c[Error] Citizens API tidak ditemukan!"));
-            return;
-        }
-        
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            player.sendMessage(ChatUtils.toComponent("&e[Guide] &fSelamat datang di NaturalSMP!"));
-            player.sendMessage(ChatUtils.toComponent("&e[Guide] &fDi dunia ini, tanah sangat berharga. Kamu harus mengklaim tanahmu."));
-            player.sendMessage(ChatUtils.toComponent("&e[Guide] &fGunakan Golden Shovel ini untuk melindungi areamu."));
-            
-            player.getInventory().addItem(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_SHOVEL));
-            
-            plugin.getQuestManager().setQuestStage(player.getUniqueId(), "tutorial", "claim_land");
-            if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(player);
-            
-            plugin.getServer().getScheduler().runTaskLater(plugin, guide::destroy, 100L);
-        }, 100L);
+            org.bukkit.Location spawnLoc = player.getLocation().add(player.getLocation().getDirection().multiply(10));
+            net.citizensnpcs.api.npc.NPC guide;
+            try {
+                guide = net.citizensnpcs.api.CitizensAPI.getNPCRegistry().createNPC(org.bukkit.entity.EntityType.PLAYER, " ");
+                guide.spawn(spawnLoc);
+                guide.getNavigator().setTarget(player, true);
+                
+                // Hide from other players
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (!p.equals(player)) {
+                        p.hideEntity(plugin, guide.getEntity());
+                    }
+                }
+                
+                // Save NPC ID to FactsManager
+                plugin.getFactsManager().setString(player.getUniqueId(), "tutorial_npc_id", String.valueOf(guide.getId()));
+                
+                // FancyHolograms Hook: copy the template and bind to NPC
+                String holoName = player.getName() + "_npc_tutorial";
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "fholo copy npc_tutorial_story " + holoName);
+                
+                // Continuously move hologram to NPC while walking
+                new org.bukkit.scheduler.BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (guide.isSpawned() && guide.getEntity() != null) {
+                            org.bukkit.Location l = guide.getEntity().getLocation().add(0, 2.5, 0);
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "fholo edit " + holoName + " moveTo " + l.getX() + " " + l.getY() + " " + l.getZ());
+                        }
+                        if (!guide.isSpawned() || !player.isOnline()) {
+                            this.cancel();
+                        }
+                        // Stop moving holo if NPC stopped moving to save resources (optional, but requested by user)
+                        if (guide.getNavigator().getEntityTarget() == null && !guide.getNavigator().isNavigating()) {
+                            this.cancel();
+                            // Trigger the dialogue automatically when it stops near the player
+                            plugin.getInteractionManager().startInteraction(player, "npc_tutorial");
+                        }
+                    }
+                }.runTaskTimer(plugin, 10L, 10L); // Update every 0.5s
+                
+            } catch (NoClassDefFoundError e) {
+                player.sendMessage(ChatUtils.toComponent("&c[Error] Citizens API tidak ditemukan!"));
+                return;
+            }
+        }, 100L); // Wait 5 seconds to simulate cinematic ending
     }
 
     private void handleUntrack(CommandSender sender, String[] args) {

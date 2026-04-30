@@ -37,14 +37,19 @@ public class ScrollListener extends PacketAdapter {
 
         // STEER_VEHICLE: field 0 = sideways (strafe), field 1 = forward, field 2 = unmount, field 3 = jump
         // Scroll maps to the forward field (positive = up, negative = down)
-        float forward = event.getPacket().getFloat().readSafely(1);
+        try {
+            float forward = event.getPacket().getFloat().readSafely(1);
 
-        if (forward > 0) {
-            session.cyclePrev(); // Scroll up = go to previous option
-        } else if (forward < 0) {
-            session.cycleNext(); // Scroll down = go to next option
-        } else {
-            return; // No scroll, just movement — don't cancel
+            if (forward > 0) {
+                session.cyclePrev(); // Scroll up = go to previous option
+            } else if (forward < 0) {
+                session.cycleNext(); // Scroll down = go to next option
+            } else {
+                return; // No scroll, just movement — don't cancel
+            }
+        } catch (Exception e) {
+            // In 1.21.4 STEER_VEHICLE might have changed. Ignore packet to avoid console spam.
+            return;
         }
 
         // Cancel the packet so the player doesn't actually move/steer

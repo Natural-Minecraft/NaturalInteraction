@@ -1,0 +1,149 @@
+{
+  "id": "npc_tutorial",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "text": "Halo pak, ini saya dikasi &6&lgolden shovel&f buat apa ya pak?",
+      "speakerType": "PLAYER",
+      "actions": [
+        {
+          "type": "JUMP_IF_FACT",
+          "value": "quest.tutorial.stage,claim_land,checkpoint_claim_land"
+        },
+        {
+          "type": "JUMP_IF_FACT",
+          "value": "quest.tutorial.stage,goto_start,checkpoint_goto_start"
+        },
+        {
+          "type": "JUMP_IF_FACT",
+          "value": "quest.tutorial.stage,talk_rudy,talk_rudy"
+        }
+      ],
+      "options": [
+        {
+          "text": "Tanyakan",
+          "nextId": "guide_explain"
+        }
+      ]
+    },
+    "guide_explain": {
+      "id": "guide_explain",
+      "text": "Itu untuk Claim Land! Di dunia ini, tanah sangat berharga. Kamu harus mengklaim tanahmu agar aman dari monster dan pencuri.",
+      "speakerType": "NPC",
+      "actions": [],
+      "options": [
+        {
+          "text": "Lalu selanjutnya bagaimana?",
+          "nextId": "guide_explain_2"
+        }
+      ]
+    },
+    "guide_explain_2": {
+      "id": "guide_explain_2",
+      "text": "Cobalah membuat claim sekarang. Jika sudah, temui NPC Start Adventure untuk pindah ke dunia Survival. Aku akan menunggumu di sana!",
+      "speakerType": "NPC",
+      "actions": [
+        {
+          "type": "QUEST_ADVANCE",
+          "value": "tutorial,claim_land"
+        },
+        {
+          "type": "COMMAND",
+          "value": "fholo edit %player%_npc_tutorial removeline 1"
+        }
+      ],
+      "options": [
+        {
+          "text": "Baik, terima kasih!",
+          "nextId": "end"
+        }
+      ]
+    },
+    
+    "checkpoint_claim_land": {
+      "id": "checkpoint_claim_land",
+      "text": "Kamu udah claim tanahmu?",
+      "speakerType": "NPC",
+      "actions": [],
+      "options": [
+        {
+          "text": "Belum",
+          "nextId": "checkpoint_claim_land_belum"
+        },
+        {
+          "text": "Gimana tadi caranya?",
+          "nextId": "checkpoint_claim_land_tanya"
+        }
+      ]
+    },
+    "checkpoint_claim_land_belum": {
+      "id": "checkpoint_claim_land_belum",
+      "text": "Silahkan, aku menunggu disini.",
+      "speakerType": "NPC",
+      "actions": [],
+      "options": [
+        {
+          "text": "Oke!",
+          "nextId": "end"
+        }
+      ]
+    },
+    "checkpoint_claim_land_tanya": {
+      "id": "checkpoint_claim_land_tanya",
+      "text": "Pegang &6&lGolden Shovel&r yang kubelikan tadi, lalu klik kanan di titik ujung area yang mau dilindungi.",
+      "speakerType": "NPC",
+      "actions": [],
+      "options": [
+        {
+          "text": "Paham!",
+          "nextId": "end"
+        }
+      ]
+    },
+    "checkpoint_goto_start": {
+      "id": "checkpoint_goto_start",
+      "text": "Temui NPC Start Adventure ya! Nanti kita bertemu lagi di dunia Survival.",
+      "speakerType": "NPC",
+      "actions": [],
+      "options": [
+        {
+          "text": "Oke siap!",
+          "nextId": "end"
+        }
+      ]
+    },
+    "talk_rudy": {
+      "id": "talk_rudy",
+      "text": "Nah, akhirnya sampai juga. Namaku Rudy, senang bertemu denganmu!",
+      "speakerType": "NPC",
+      "actions": [
+        {
+          "type": "COMMAND",
+          "value": "fholo edit %player%_npc_tutorial removeline 1"
+        },
+        {
+          "type": "QUEST_COMPLETE",
+          "value": "tutorial"
+        },
+        {
+          "type": "COMMAND",
+          "value": "fholo remove %player%_npc_tutorial"
+        }
+      ],
+      "options": [
+        {
+          "text": "Senang bertemu denganmu juga, Rudy!",
+          "nextId": "end"
+        }
+      ]
+    },
+    "end": {
+      "id": "end",
+      "text": "",
+      "speakerType": "NPC",
+      "actions": [],
+      "options": []
+    }
+  }
+}

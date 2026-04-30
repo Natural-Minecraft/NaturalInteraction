@@ -71,23 +71,11 @@ public class DialogueRenderer {
     // ─── Hologram (NPC name tag only) ─────────────────────────────────────────
 
     public void initHologram(Location npcBase) {
-        clearHologram();
-        if (npcBase == null) return;
-        Location loc = npcBase.clone().add(0, 2.4, 0);
-        String displayName = buildNpcDisplayName();
-        npcNameDisplay = loc.getWorld().spawn(loc, TextDisplay.class, td -> {
-            td.setBillboard(Display.Billboard.CENTER);
-            td.setPersistent(false);
-            td.setViewRange(12);
-            td.setBackgroundColor(Color.fromARGB(180, 0, 0, 0));
-            td.setAlignment(TextDisplay.TextAlignment.CENTER);
-            td.text(ChatUtils.toComponent("&6&l✦ &e" + displayName));
-        });
+        // Disabled by user request: "kalo kita berinteraksi dengan npc, kan ada hologram ya diatas namanya, itu gausah aja"
     }
 
     public void clearHologram() {
-        if (npcNameDisplay != null && npcNameDisplay.isValid()) npcNameDisplay.remove();
-        npcNameDisplay = null;
+        // Disabled
     }
 
     // ─── Typewriter + Chat Streaming ──────────────────────────────────────────

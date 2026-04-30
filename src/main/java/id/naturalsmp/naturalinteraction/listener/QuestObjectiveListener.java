@@ -29,21 +29,23 @@ public class QuestObjectiveListener implements Listener {
                     // Check if they are clicking a block (simulating a claim point)
                     // We will wait 1 second to let the claim plugin process it, then mark as complete
                     plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                        // Mark quest as completed
-                        plugin.getQuestManager().setQuestState(player.getUniqueId(), "tutorial", "COMPLETED");
-                        plugin.getQuestManager().clearActiveQuest(player.getUniqueId());
+                        // Mark quest as goto_start
+                        plugin.getQuestManager().setQuestStage(player.getUniqueId(), "tutorial", "goto_start");
                         if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(player);
                         
                         player.showTitle(net.kyori.adventure.title.Title.title(
-                            id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&6&lTutorial Selesai!"),
-                            id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&eSelamat datang di NaturalSMP"),
+                            id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&a&lKerja Bagus!"),
+                            id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&eTanahmu sekarang aman"),
                             net.kyori.adventure.title.Title.Times.times(
                                 java.time.Duration.ofMillis(500), 
                                 java.time.Duration.ofMillis(3000), 
                                 java.time.Duration.ofMillis(1000)
                             )
                         ));
-                        player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&a⭐ Quest Selesai: &ePerjalanan Dimulai"));
+                        player.sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&a⭐ &eLangkah Selanjutnya: Temui NPC Start Adventure!"));
+                        
+                        // Add objective marker back to the hologram
+                        plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "fholo edit " + player.getName() + "_npc_tutorial insertbefore 1 &6&l!");
                         
                         // Give some basic reward
                         plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "eco give " + player.getName() + " 1000");
