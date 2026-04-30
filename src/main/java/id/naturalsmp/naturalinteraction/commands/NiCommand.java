@@ -42,7 +42,7 @@ public class NiCommand implements CommandExecutor, TabCompleter {
     // New v2 subcommand names
     private static final Set<String> V2_SUBS = Set.of(
             "reload", "clearchat", "connect", "facts", "trigger",
-            "fire", "cinematic", "quest", "untrack", "manifest", "assets", "test-pre-prologue");
+            "fire", "cinematic", "quest", "untrack", "manifest", "assets", "test-pre-prologue", "test-tutorial");
 
     public NiCommand(NaturalInteraction plugin) {
         this.plugin = plugin;
@@ -107,6 +107,7 @@ public class NiCommand implements CommandExecutor, TabCompleter {
             case "manifest"  -> handleManifest(sender, args);
             case "assets"    -> handleAssets(sender, args);
             case "test-pre-prologue" -> handleTestPrePrologue(sender, args);
+            case "test-tutorial" -> handleTestTutorial(sender, args);
         }
         return true;
     }
@@ -324,6 +325,48 @@ public class NiCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void handleTestTutorial(CommandSender sender, String[] args) {
+        if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
+        if (!(sender instanceof Player player)) return;
+        
+        player.sendMessage(ChatUtils.toComponent("&6⭐ Memulai simulasi tutorial..."));
+        
+        plugin.getQuestManager().setActiveQuest(player.getUniqueId(), "tutorial");
+        plugin.getQuestManager().setQuestState(player.getUniqueId(), "tutorial", "ACTIVE");
+        plugin.getQuestManager().setQuestStage(player.getUniqueId(), "tutorial", "intro");
+        if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(player);
+        
+        if (plugin.getCinematicManager() != null && plugin.getCinematicManager().getSequence("lobby_intro") != null) {
+            plugin.getCinematicManager().getPlayer().play(player, plugin.getCinematicManager().getSequence("lobby_intro"));
+        } else {
+            player.sendMessage(ChatUtils.toComponent("&e[System] Cinematic 'lobby_intro' tidak ditemukan, menggunakan fallback cutscene."));
+        }
+        
+        org.bukkit.Location spawnLoc = player.getLocation().add(player.getLocation().getDirection().multiply(10));
+        net.citizensnpcs.api.npc.NPC guide;
+        try {
+            guide = net.citizensnpcs.api.CitizensAPI.getNPCRegistry().createNPC(org.bukkit.entity.EntityType.PLAYER, "Guide");
+            guide.spawn(spawnLoc);
+            guide.getNavigator().setTarget(player, true);
+        } catch (NoClassDefFoundError e) {
+            player.sendMessage(ChatUtils.toComponent("&c[Error] Citizens API tidak ditemukan!"));
+            return;
+        }
+        
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            player.sendMessage(ChatUtils.toComponent("&e[Guide] &fSelamat datang di NaturalSMP!"));
+            player.sendMessage(ChatUtils.toComponent("&e[Guide] &fDi dunia ini, tanah sangat berharga. Kamu harus mengklaim tanahmu."));
+            player.sendMessage(ChatUtils.toComponent("&e[Guide] &fGunakan Golden Shovel ini untuk melindungi areamu."));
+            
+            player.getInventory().addItem(new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLDEN_SHOVEL));
+            
+            plugin.getQuestManager().setQuestStage(player.getUniqueId(), "tutorial", "claim_land");
+            if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(player);
+            
+            plugin.getServer().getScheduler().runTaskLater(plugin, guide::destroy, 100L);
+        }, 100L);
+    }
+
     private void handleUntrack(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
         Player target = resolvePlayer(sender, args, 1);
@@ -384,7 +427,8 @@ public class NiCommand implements CommandExecutor, TabCompleter {
                 new String[]{"cinematic <start|stop> <page> [player]", "Main cinematic"},
                 new String[]{"quest track <quest> [player]", "Track quest"},
                 new String[]{"untrack [player]", "Stop tracking"},
-                new String[]{"manifest inspect [player]", "Inspect manifest"}
+                new String[]{"manifest inspect [player]", "Inspect manifest"},
+                new String[]{"test-tutorial", "Test tutorial quest"}
         )) {
             sender.sendMessage(ChatUtils.toComponent("  &8/ni &7" + c[0] + " &8— &f" + c[1]));
         }

@@ -1,0 +1,19 @@
+{
+  "id": "tutorial",
+  "name": "Perjalanan Dimulai",
+  "description": "Pelajari dasar-dasar bertahan hidup di NaturalSMP.",
+  "stages": {
+    "intro": {
+      "id": "intro",
+      "objective": "Ikuti arahan di Lobby"
+    },
+    "talk_guide": {
+      "id": "talk_guide",
+      "objective": "Bicara dengan Guide di Lobby"
+    },
+    "claim_land": {
+      "id": "claim_land",
+      "objective": "Buat 1 Claim Land pertamamu"
+    }
+  }
+}

@@ -10,6 +10,7 @@ import id.naturalsmp.naturalinteraction.listener.EditorListener;
 import id.naturalsmp.naturalinteraction.listener.InteractionListener;
 import id.naturalsmp.naturalinteraction.listener.PrologueJoinListener;
 import id.naturalsmp.naturalinteraction.listener.ScrollListener;
+import id.naturalsmp.naturalinteraction.listener.QuestObjectiveListener;
 import id.naturalsmp.naturalinteraction.manager.InteractionManager;
 import id.naturalsmp.naturalinteraction.manifest.ManifestManager;
 import id.naturalsmp.naturalinteraction.npc.StoryNPCManager;
@@ -20,6 +21,7 @@ import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
 import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
 import id.naturalsmp.naturalinteraction.webpanel.WebPanelServer;
 import id.naturalsmp.naturalinteraction.cinematic.CinematicManager;
+import id.naturalsmp.naturalinteraction.database.DatabaseManager;
 import id.naturalsmp.naturalinteraction.quest.QuestManager;
 import id.naturalsmp.naturalinteraction.quest.QuestOverlay;
 import com.comphenix.protocol.ProtocolLibrary;
@@ -144,6 +146,9 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         // Prologue join enforcement
         this.prologueJoinListener = new PrologueJoinListener(this);
         pm.registerEvents(prologueJoinListener, this);
+        
+        // Quest objectives
+        pm.registerEvents(new QuestObjectiveListener(this), this);
 
         // Dungeon-Story integration (soft dependency)
         if (getServer().getPluginManager().getPlugin("NaturalDungeon") != null) {

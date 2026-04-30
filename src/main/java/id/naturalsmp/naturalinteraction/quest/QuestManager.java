@@ -20,7 +20,14 @@ public class QuestManager {
     public QuestManager(NaturalInteraction plugin) {
         this.plugin = plugin;
         this.questsFolder = new File(plugin.getDataFolder(), "quests");
-        if (!questsFolder.exists()) questsFolder.mkdirs();
+        if (!questsFolder.exists()) {
+            questsFolder.mkdirs();
+            try {
+                plugin.saveResource("quests/tutorial.json", false);
+            } catch (IllegalArgumentException e) {
+                // Ignore if resource doesn't exist in jar
+            }
+        }
         loadAll();
     }
 
