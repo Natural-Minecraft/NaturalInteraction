@@ -229,10 +229,6 @@ public class CinematicPlayer {
         };
     }
 
-    public boolean isPlaying(UUID uuid) {
-        return activeCinematics.containsKey(uuid);
-    }
-
     public void reattach(Player player) {
         ActiveCinematic active = activeCinematics.get(player.getUniqueId());
         if (active != null && active.mount != null && player.getGameMode() == GameMode.SPECTATOR) {

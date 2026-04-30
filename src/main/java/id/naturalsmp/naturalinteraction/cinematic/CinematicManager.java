@@ -171,7 +171,7 @@ public class CinematicManager implements Listener {
     }
 
     @EventHandler
-    public void onDismount(org.spigotmc.event.entity.EntityDismountEvent event) {
+    public void onDismount(org.bukkit.event.entity.EntityDismountEvent event) {
         if (event.getEntity() instanceof org.bukkit.entity.Player p) {
             if (player.isPlaying(p.getUniqueId())) {
                 event.setCancelled(true);

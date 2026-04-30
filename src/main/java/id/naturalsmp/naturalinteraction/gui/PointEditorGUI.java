@@ -6,6 +6,7 @@ import id.naturalsmp.naturalinteraction.cinematic.CinematicSequence;
 import id.naturalsmp.naturalinteraction.utils.ChatUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
