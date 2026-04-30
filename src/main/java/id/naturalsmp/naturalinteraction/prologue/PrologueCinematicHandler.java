@@ -188,7 +188,7 @@ public class PrologueCinematicHandler implements Listener {
                 player.setFlying(false);
                 player.setGravity(true);
                 
-                plugin.getInteractionManager().startInteraction(player, prologueId);
+                // Allow player to walk up to Dewi themselves
                 cleanup(true);
             }
         }.runTaskLater(plugin, 15L); // slight overlap so prologue loads under the black screen
