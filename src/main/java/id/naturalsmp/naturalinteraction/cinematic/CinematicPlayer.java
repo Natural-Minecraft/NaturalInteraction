@@ -93,15 +93,12 @@ public class CinematicPlayer {
                 // Handle Cross-World: Instant teleport
                 if (!current.getLocation().getWorld().equals(next.getLocation().getWorld())) {
                     if (ticksInCurrentPoint == 0) {
-                        mount.teleport(current.getLocation());
-                        player.teleport(current.getLocation());
+                        mount.teleport(current.getLocation().clone().add(0, 1.62, 0));
+                        player.teleport(current.getLocation().clone().add(0, 1.62, 0));
                     }
                     if (ticksInCurrentPoint >= current.getDurationTicks() - 1) {
-                        mount.teleport(next.getLocation());
-                        if (player.getGameMode() != GameMode.SPECTATOR) {
-                            player.teleport(next.getLocation());
-                            mount.addPassenger(player); // Remount if dismounted
-                        }
+                        mount.teleport(next.getLocation().clone().add(0, 1.62, 0));
+                        player.teleport(next.getLocation().clone().add(0, 1.62, 0));
                         ticksInCurrentPoint = current.getDurationTicks(); // Force advance
                     } else {
                         ticksInCurrentPoint++;
@@ -116,19 +113,21 @@ public class CinematicPlayer {
                     // Apply easing
                     float easedProgress = applyEasing(progress, current.getEasing());
 
-                    // Interpolate location
+                    // Interpolate location and offset by 1.62 (player eye height)
+                    // because Marker ArmorStands have an eye height of 0.
                     Location interpolated = interpolate(
                             current.getLocation(), current.getYaw(), current.getPitch(),
                             next.getLocation(), next.getYaw(), next.getPitch(),
                             easedProgress);
 
-                    mount.teleport(interpolated);
+                    Location mountLoc = interpolated.clone().add(0, 1.62, 0);
+                    mount.teleport(mountLoc);
 
                     if (player.getGameMode() != GameMode.SPECTATOR) {
                         // If not in spectator, they are a passenger. We need to sync rotation without dismounting
                         // Unfortunately, Bukkit teleport dismounts. The safest way is to just teleport the player directly
                         // and abandon the mount if they are not in spectator.
-                        player.teleport(interpolated);
+                        player.teleport(mountLoc);
                     }
 
                     ticksInCurrentPoint++;
