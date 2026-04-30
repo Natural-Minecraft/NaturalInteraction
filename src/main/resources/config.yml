@@ -27,8 +27,9 @@ prologue:
     # Cinematic ID yang akan diputar saat pemain turun dari langit
     pre-prologue-cinematic-id: "pre-prologue"
     # Custom font character dari resource pack — gambar Title Screen kamu
-    # (teks sudah ada di dalam gambar, tidak butuh subtitle)
     title-char: "\uE000"
+    # Custom font character untuk Logo Natural saat transisi (fade black)
+    title-logo-char: "\uE001"
     # Total blok jarak melayang turun (ketinggian 30 blok)
     float-down-blocks: 30
     # Kecepatan turun (blok per tick) — lebih kecil = lebih lambat

@@ -39,13 +39,11 @@ public class PrologueCinematicHandler implements Listener {
     private final Player player;
 
     private final String titleChar;
+    private final String titleLogoChar;
     private final int floatBlocks;
     private final double floatSpeed;
     private final Particle floatParticle;
     private final String prologueId;
-    private final String prePrologueCinematicId;
-
-    private PrologueTitleTask titleTask;
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -67,6 +65,7 @@ public class PrologueCinematicHandler implements Listener {
         this.prologueId  = plugin.getConfig().getString("prologue.interaction-id", "prologue");
         this.prePrologueCinematicId = plugin.getConfig().getString("prologue.cinematic.pre-prologue-cinematic-id", "pre-prologue");
         this.titleChar   = plugin.getConfig().getString("prologue.cinematic.title-char", "\uE000");
+        this.titleLogoChar = plugin.getConfig().getString("prologue.cinematic.title-logo-char", "\uE001");
         this.floatBlocks = plugin.getConfig().getInt("prologue.cinematic.float-down-blocks", 25);
         this.floatSpeed  = plugin.getConfig().getDouble("prologue.cinematic.float-down-speed", 0.04);
 
@@ -105,9 +104,9 @@ public class PrologueCinematicHandler implements Listener {
                 (float) plugin.getConfig().getDouble("prologue.sky-spawn.pitch", 30.0));
         player.teleport(skySpawn);
 
-        // Start looping title (every 40 ticks = 2s so title never expires)
-        titleTask = new PrologueTitleTask(player, titleChar);
-        titleTask.runTaskTimer(plugin, 0L, 40L);
+        // Show transparent login screen indefinitely
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                "screeneffect fullscreen_transparent transparent 10 999999999 10 freeze " + player.getName() + " " + titleChar);
     }
 
     // ─── Crouch → start float ─────────────────────────────────────────────────
@@ -129,31 +128,40 @@ public class PrologueCinematicHandler implements Listener {
     private void transitionToFloat() {
         HandlerList.unregisterAll(this);
 
-        if (titleTask != null) titleTask.cancel();
-        player.clearTitle();
-
-        // Subtle chime on press
+        // Play subtle chime
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.6f, 0.9f);
 
-        // Release freeze
-        player.removePotionEffect(PotionEffectType.SLOWNESS);
-        player.removePotionEffect(PotionEffectType.JUMP_BOOST);
+        // Transition: Black fade in with Natural logo
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                "screeneffect fullscreen BLACK 5 10 10 freeze " + player.getName() + " " + titleLogoChar);
 
-        // Enable flight so we can push them downward manually
-        player.setAllowFlight(true);
-        player.setFlying(true);
+        // Delay starting the cinematic by 5 ticks (when screen is fully black)
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) return;
 
-        // Play the cinematic camera simultaneously
-        id.naturalsmp.naturalinteraction.cinematic.CinematicSequence seq =
-                plugin.getCinematicManager().getSequence(prePrologueCinematicId);
-        if (seq != null) {
-            plugin.getCinematicManager().getPlayer().play(player, seq);
-        }
+                // Release freeze
+                player.removePotionEffect(PotionEffectType.SLOWNESS);
+                player.removePotionEffect(PotionEffectType.JUMP_BOOST);
 
-        // Phase 2: float down 30 blocks (or let cinematic handle position while we spawn particles)
-        int totalTicks = (int) Math.round(floatBlocks / floatSpeed);
-        new PrologueFloatTask(plugin, player, floatSpeed, totalTicks, floatParticle, this::triggerScreenEffect)
-                .runTaskTimer(plugin, 2L, 1L);
+                // Enable flight so we can push them downward manually
+                player.setAllowFlight(true);
+                player.setFlying(true);
+
+                // Play the cinematic camera simultaneously
+                id.naturalsmp.naturalinteraction.cinematic.CinematicSequence seq =
+                        plugin.getCinematicManager().getSequence(prePrologueCinematicId);
+                if (seq != null) {
+                    plugin.getCinematicManager().getPlayer().play(player, seq);
+                }
+
+                // Phase 2: float down (or let cinematic handle position while we spawn particles)
+                int totalTicks = (int) Math.round(floatBlocks / floatSpeed);
+                new PrologueFloatTask(plugin, player, floatSpeed, totalTicks, floatParticle, PrologueCinematicHandler.this::triggerScreenEffect)
+                        .runTaskTimer(plugin, 0L, 1L);
+            }
+        }.runTaskLater(plugin, 5L);
     }
 
     // ─── Float done → screeneffect → start prologue ────────────────────────────
@@ -190,7 +198,6 @@ public class PrologueCinematicHandler implements Listener {
     private void cleanup(boolean triggered) {
         active.remove(player.getUniqueId());
         HandlerList.unregisterAll(this);
-        if (titleTask != null && !titleTask.isCancelled()) titleTask.cancel();
         if (!triggered && player.isOnline()) {
             player.removePotionEffect(PotionEffectType.SLOWNESS);
             player.removePotionEffect(PotionEffectType.JUMP_BOOST);
