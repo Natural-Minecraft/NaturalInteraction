@@ -24,6 +24,8 @@ prologue:
     pitch: 30.0
 
   cinematic:
+    # Cinematic ID yang akan diputar saat pemain turun dari langit
+    pre-prologue-cinematic-id: "pre-prologue"
     # Custom font character dari resource pack — gambar Title Screen kamu
     # (teks sudah ada di dalam gambar, tidak butuh subtitle)
     title-char: "\uE000"

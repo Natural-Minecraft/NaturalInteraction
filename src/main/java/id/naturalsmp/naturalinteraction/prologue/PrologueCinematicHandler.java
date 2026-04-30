@@ -43,6 +43,7 @@ public class PrologueCinematicHandler implements Listener {
     private final double floatSpeed;
     private final Particle floatParticle;
     private final String prologueId;
+    private final String prePrologueCinematicId;
 
     private PrologueTitleTask titleTask;
 
@@ -64,6 +65,7 @@ public class PrologueCinematicHandler implements Listener {
         this.player = player;
 
         this.prologueId  = plugin.getConfig().getString("prologue.interaction-id", "prologue");
+        this.prePrologueCinematicId = plugin.getConfig().getString("prologue.cinematic.pre-prologue-cinematic-id", "pre-prologue");
         this.titleChar   = plugin.getConfig().getString("prologue.cinematic.title-char", "\uE000");
         this.floatBlocks = plugin.getConfig().getInt("prologue.cinematic.float-down-blocks", 25);
         this.floatSpeed  = plugin.getConfig().getDouble("prologue.cinematic.float-down-speed", 0.04);
@@ -138,9 +140,9 @@ public class PrologueCinematicHandler implements Listener {
         player.setAllowFlight(true);
         player.setFlying(true);
 
-        // Play the "pre-prologue" cinematic camera simultaneously
+        // Play the cinematic camera simultaneously
         id.naturalsmp.naturalinteraction.cinematic.CinematicSequence seq =
-                plugin.getCinematicManager().getSequence("pre-prologue");
+                plugin.getCinematicManager().getSequence(prePrologueCinematicId);
         if (seq != null) {
             plugin.getCinematicManager().getPlayer().play(player, seq);
         }
