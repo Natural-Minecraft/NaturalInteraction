@@ -147,9 +147,9 @@ public class PrologueCinematicHandler implements Listener {
             plugin.getCinematicManager().getPlayer().play(player, seq);
         }
 
-        // Phase 2: float down 30 blocks
+        // Phase 2: float down 30 blocks (or let cinematic handle position while we spawn particles)
         int totalTicks = (int) Math.round(floatBlocks / floatSpeed);
-        new PrologueFloatTask(player, floatSpeed, totalTicks, floatParticle, this::triggerScreenEffect)
+        new PrologueFloatTask(plugin, player, floatSpeed, totalTicks, floatParticle, this::triggerScreenEffect)
                 .runTaskTimer(plugin, 2L, 1L);
     }
 

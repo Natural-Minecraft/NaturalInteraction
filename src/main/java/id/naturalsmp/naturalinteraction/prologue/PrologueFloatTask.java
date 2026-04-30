@@ -20,11 +20,13 @@ public class PrologueFloatTask extends BukkitRunnable {
     private final int totalTicks;    // how many ticks to float
     private final Particle particle;
     private final Runnable onComplete;
+    private final NaturalInteraction plugin;
 
     private int tick = 0;
     private final Random random = new Random();
 
-    public PrologueFloatTask(Player player, double speed, int totalTicks, Particle particle, Runnable onComplete) {
+    public PrologueFloatTask(NaturalInteraction plugin, Player player, double speed, int totalTicks, Particle particle, Runnable onComplete) {
+        this.plugin = plugin;
         this.player = player;
         this.speed = speed;
         this.totalTicks = totalTicks;
@@ -41,13 +43,15 @@ public class PrologueFloatTask extends BukkitRunnable {
 
         tick++;
 
-        // Move player downward smoothly
+        // Only move the player downwards manually if they are NOT in a cinematic
+        // If they are in a cinematic, the cinematic sequence itself controls their position.
         Location loc = player.getLocation();
-        loc.subtract(0, speed, 0);
-        player.teleport(loc);
-
-        // Zero out velocity so physics don't interfere
-        player.setVelocity(new Vector(0, 0, 0));
+        if (!plugin.getCinematicManager().getPlayer().isPlaying(player.getUniqueId())) {
+            loc.subtract(0, speed, 0);
+            player.teleport(loc);
+            // Zero out velocity so physics don't interfere
+            player.setVelocity(new Vector(0, 0, 0));
+        }
 
         // Spawn particles every 3 ticks in a sphere around the player
         if (tick % 3 == 0) {

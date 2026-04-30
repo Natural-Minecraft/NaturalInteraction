@@ -50,14 +50,18 @@ public class CinematicPlayer {
                     PotionEffectType.BLINDNESS, 10, 0, false, false, false));
         }
 
-        // Spawn invisible mount for smooth Bedrock cinematic
         ArmorStand mount = (ArmorStand) originalLocation.getWorld().spawnEntity(originalLocation, EntityType.ARMOR_STAND);
         mount.setVisible(false);
         mount.setGravity(false);
         mount.setMarker(true);
         mount.setInvulnerable(true);
         mount.setBasePlate(false);
-        mount.addPassenger(player);
+
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            player.setSpectatorTarget(mount);
+        } else {
+            mount.addPassenger(player);
+        }
 
         ActiveCinematic active = new ActiveCinematic(sequence, originalLocation, originalMode, mount);
         activeCinematics.put(player.getUniqueId(), active);
@@ -94,7 +98,10 @@ public class CinematicPlayer {
                     }
                     if (ticksInCurrentPoint >= current.getDurationTicks() - 1) {
                         mount.teleport(next.getLocation());
-                        player.teleport(next.getLocation());
+                        if (player.getGameMode() != GameMode.SPECTATOR) {
+                            player.teleport(next.getLocation());
+                            mount.addPassenger(player); // Remount if dismounted
+                        }
                         ticksInCurrentPoint = current.getDurationTicks(); // Force advance
                     } else {
                         ticksInCurrentPoint++;
@@ -117,11 +124,12 @@ public class CinematicPlayer {
 
                     mount.teleport(interpolated);
 
-                    // Force player rotation
-                    Location pLoc = player.getLocation();
-                    pLoc.setYaw(interpolated.getYaw());
-                    pLoc.setPitch(interpolated.getPitch());
-                    player.teleport(pLoc);
+                    if (player.getGameMode() != GameMode.SPECTATOR) {
+                        // If not in spectator, they are a passenger. We need to sync rotation without dismounting
+                        // Unfortunately, Bukkit teleport dismounts. The safest way is to just teleport the player directly
+                        // and abandon the mount if they are not in spectator.
+                        player.teleport(interpolated);
+                    }
 
                     ticksInCurrentPoint++;
                     tick++;
@@ -176,6 +184,9 @@ public class CinematicPlayer {
 
     private void restore(Player player, ActiveCinematic active) {
         activeCinematics.remove(player.getUniqueId());
+        if (player.getGameMode() == GameMode.SPECTATOR && player.getSpectatorTarget() != null && player.getSpectatorTarget().equals(active.mount)) {
+            player.setSpectatorTarget(null);
+        }
         if (active.mount != null && active.mount.isValid()) {
             active.mount.removePassenger(player);
             active.mount.remove();
