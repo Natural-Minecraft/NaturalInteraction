@@ -1,7 +1,6 @@
 package id.naturalsmp.naturalinteraction;
 
 import id.naturalsmp.naturalinteraction.commands.NiCommand;
-import id.naturalsmp.naturalinteraction.commands.SidequestCommand;
 import id.naturalsmp.naturalinteraction.commands.StoryCommand;
 import id.naturalsmp.naturalinteraction.editor.EditorMode;
 import id.naturalsmp.naturalinteraction.facts.FactsManager;
@@ -21,7 +20,8 @@ import id.naturalsmp.naturalinteraction.utils.NaturalInteractionExpansion;
 import id.naturalsmp.naturalinteraction.visual.ElementalEffectManager;
 import id.naturalsmp.naturalinteraction.webpanel.WebPanelServer;
 import id.naturalsmp.naturalinteraction.cinematic.CinematicManager;
-import id.naturalsmp.naturalinteraction.database.DatabaseManager;
+import id.naturalsmp.naturalinteraction.quest.QuestManager;
+import id.naturalsmp.naturalinteraction.quest.QuestOverlay;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.event.EventHandler;
@@ -44,6 +44,8 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     private WebPanelServer webPanelServer;
     private CinematicManager cinematicManager;
     private DatabaseManager databaseManager;
+    private QuestManager questManager;
+    private QuestOverlay questOverlay;
 
     @Override
     public void onEnable() {
@@ -98,6 +100,10 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
 
         // Cinematic system (Phase 6)
         this.cinematicManager = new CinematicManager(this);
+
+        // Quest system
+        this.questManager = new QuestManager(this);
+        this.questOverlay = new QuestOverlay(this);
 
         // Register this class as listener for PlayerQuitEvent (manifest cleanup)
         getServer().getPluginManager().registerEvents(this, this);
@@ -158,9 +164,6 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         if (getCommand("story") != null) {
             getCommand("story").setExecutor(new StoryCommand(this));
         }
-        if (getCommand("sidequest") != null) {
-            getCommand("sidequest").setExecutor(new SidequestCommand(this));
-        }
     }
 
     // ─── Plugin Reload ────────────────────────────────────────────────────────
@@ -172,6 +175,7 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         if (elementalEffectManager != null) elementalEffectManager.reload();
         if (manifestManager != null)        manifestManager.reload();
         if (cinematicManager != null)       cinematicManager.reload();
+        if (questManager != null)           questManager.loadAll();
     }
 
     // ─── Getters ──────────────────────────────────────────────────────────────
@@ -187,4 +191,6 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
     public ManifestManager getManifestManager()                 { return manifestManager; }
     public CinematicManager getCinematicManager()               { return cinematicManager; }
     public DatabaseManager getDatabaseManager()                 { return databaseManager; }
+    public QuestManager getQuestManager()                       { return questManager; }
+    public QuestOverlay getQuestOverlay()                       { return questOverlay; }
 }

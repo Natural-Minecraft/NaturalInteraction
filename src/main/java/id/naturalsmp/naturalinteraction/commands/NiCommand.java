@@ -290,12 +290,48 @@ public class NiCommand implements CommandExecutor, TabCompleter {
 
     private void handleQuest(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Quest tracking system"));
+        if (args.length < 2) {
+            sender.sendMessage(ChatUtils.toComponent("&c/ni quest <list|track|untrack> [player]"));
+            return;
+        }
+        String action = args[1].toLowerCase();
+        
+        if (action.equals("list")) {
+            var quests = plugin.getQuestManager().getQuests();
+            sender.sendMessage(ChatUtils.toComponent("&6--- Quests (&e" + quests.size() + "&6) ---"));
+            quests.forEach(q -> sender.sendMessage(ChatUtils.toComponent("  &7" + q.getId() + " &8- &f" + q.getName())));
+            return;
+        }
+        
+        if (action.equals("track")) {
+            if (args.length < 3) {
+                sender.sendMessage(ChatUtils.toComponent("&c/ni quest track <questId> [player]"));
+                return;
+            }
+            String questId = args[2];
+            if (plugin.getQuestManager().getQuest(questId) == null) {
+                sender.sendMessage(ChatUtils.toComponent("&cQuest tidak ditemukan: &f" + questId));
+                return;
+            }
+            Player target = resolvePlayer(sender, args, 3);
+            if (target == null) return;
+            
+            plugin.getQuestManager().setActiveQuest(target.getUniqueId(), questId);
+            plugin.getQuestManager().setQuestState(target.getUniqueId(), questId, "ACTIVE");
+            if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(target);
+            sender.sendMessage(ChatUtils.toComponent("&a✔ Memulai quest &e" + questId + " &auntuk &e" + target.getName()));
+            return;
+        }
     }
 
     private void handleUntrack(CommandSender sender, String[] args) {
         if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
-        sender.sendMessage(ChatUtils.toComponent("&eWIP: Quest tracking system"));
+        Player target = resolvePlayer(sender, args, 1);
+        if (target == null) return;
+        
+        plugin.getQuestManager().clearActiveQuest(target.getUniqueId());
+        if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(target);
+        sender.sendMessage(ChatUtils.toComponent("&a✔ Menghentikan tracking quest untuk &e" + target.getName()));
     }
 
     private void handleManifest(CommandSender sender, String[] args) {
@@ -400,7 +436,11 @@ public class NiCommand implements CommandExecutor, TabCompleter {
                 if (args.length == 2) return List.of("inspect", "list");
                 return onlinePlayers(args[args.length - 1]);
             }
-            case "quest" -> { if (args.length == 2) return List.of("track"); }
+            case "quest" -> { 
+                if (args.length == 2) return List.of("track", "list", "untrack");
+                if (args.length == 3 && args[1].equalsIgnoreCase("track")) 
+                    return plugin.getQuestManager().getQuests().stream().map(id.naturalsmp.naturalinteraction.quest.Quest::getId).collect(Collectors.toList());
+            }
             case "assets" -> { if (args.length == 2) return List.of("clean"); }
         }
 

@@ -34,4 +34,9 @@ public enum ActionType {
     @Deprecated REMOVE_TAG,       // → REMOVE_FACT "tag.<name>"
     @Deprecated JUMP_IF_TAG,      // → JUMP_IF_FACT "tag.<name>,true,nodeId"
     @Deprecated JUMP_IF_NOT_TAG,  // → JUMP_IF_NOT_FACT "tag.<name>,true,nodeId"
+
+    // ─── Quest System ─────────────────────────────────────────────────────────
+    QUEST_START,        // value: "questId"
+    QUEST_ADVANCE,      // value: "questId,stageId"
+    QUEST_COMPLETE,     // value: "questId"
 }

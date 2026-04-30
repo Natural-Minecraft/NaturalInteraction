@@ -194,6 +194,35 @@ public class ActionExecutor {
                     }
                 }
 
+                // ─── Quest System ─────────────────────────────────────────────
+                case QUEST_START -> {
+                    if (plugin != null && plugin.getQuestManager() != null) {
+                        plugin.getQuestManager().setActiveQuest(player.getUniqueId(), value);
+                        plugin.getQuestManager().setQuestState(player.getUniqueId(), value, "ACTIVE");
+                        player.sendMessage(ChatUtils.toComponent("&6⭐ Quest Baru: &e" + value));
+                        if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(player);
+                    }
+                }
+                case QUEST_ADVANCE -> {
+                    if (plugin != null && plugin.getQuestManager() != null) {
+                        String[] p = value.split(",", 2);
+                        if (p.length == 2) {
+                            plugin.getQuestManager().setQuestStage(player.getUniqueId(), p[0], p[1]);
+                            player.sendMessage(ChatUtils.toComponent("&6⭐ Quest Diperbarui: &e" + p[0]));
+                            if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(player);
+                        }
+                    }
+                }
+                case QUEST_COMPLETE -> {
+                    if (plugin != null && plugin.getQuestManager() != null) {
+                        plugin.getQuestManager().setQuestState(player.getUniqueId(), value, "COMPLETED");
+                        String active = plugin.getQuestManager().getActiveQuest(player.getUniqueId());
+                        if (value.equals(active)) plugin.getQuestManager().clearActiveQuest(player.getUniqueId());
+                        player.sendMessage(ChatUtils.toComponent("&a⭐ Quest Selesai: &e" + value));
+                        if (plugin.getQuestOverlay() != null) plugin.getQuestOverlay().updateOverlay(player);
+                    }
+                }
+
                 // ─── Legacy Tag (maps to Facts) ───────────────────────────────
                 case ADD_TAG -> {
                     if (facts != null) facts.addTag(player.getUniqueId(), value);
