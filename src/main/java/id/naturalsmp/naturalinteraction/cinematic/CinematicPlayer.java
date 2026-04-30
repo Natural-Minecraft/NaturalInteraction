@@ -84,6 +84,14 @@ public class CinematicPlayer {
                 CameraPoint next = pointIndex + 1 < points.size()
                         ? points.get(pointIndex + 1)
                         : (sequence.isLoop() ? points.get(0) : current);
+                
+                CameraPoint prev = pointIndex - 1 >= 0
+                        ? points.get(pointIndex - 1)
+                        : (sequence.isLoop() ? points.get(points.size() - 1) : current);
+                
+                CameraPoint nextNext = pointIndex + 2 < points.size()
+                        ? points.get(pointIndex + 2)
+                        : (sequence.isLoop() ? points.get((pointIndex + 2) % points.size()) : next);
 
                 // Display subtitle text at the start of the point
                 if (ticksInCurrentPoint == 0 && current.getText() != null && !current.getText().isEmpty()) {
@@ -116,8 +124,9 @@ public class CinematicPlayer {
                     // Interpolate location and offset by 1.62 (player eye height)
                     // because Marker ArmorStands have an eye height of 0.
                     Location interpolated = interpolate(
-                            current.getLocation(), current.getYaw(), current.getPitch(),
-                            next.getLocation(), next.getYaw(), next.getPitch(),
+                            prev.getLocation(), current.getLocation(), next.getLocation(), nextNext.getLocation(),
+                            current.getYaw(), current.getPitch(),
+                            next.getYaw(), next.getPitch(),
                             easedProgress);
 
                     Location mountLoc = interpolated.clone().add(0, 1.62, 0);
@@ -197,19 +206,29 @@ public class CinematicPlayer {
         }
     }
 
-    private Location interpolate(Location from, float fromYaw, float fromPitch,
-                                  Location to, float toYaw, float toPitch, float t) {
-        double x = from.getX() + (to.getX() - from.getX()) * t;
-        double y = from.getY() + (to.getY() - from.getY()) * t;
-        double z = from.getZ() + (to.getZ() - from.getZ()) * t;
+    private Location interpolate(Location p0, Location p1, Location p2, Location p3,
+                                  float fromYaw, float fromPitch, float toYaw, float toPitch, float t) {
+        // Catmull-Rom spline for position
+        double t2 = t * t;
+        double t3 = t2 * t;
+
+        double f0 = -0.5 * t3 + t2 - 0.5 * t;
+        double f1 = 1.5 * t3 - 2.5 * t2 + 1.0;
+        double f2 = -1.5 * t3 + 2.0 * t2 + 0.5 * t;
+        double f3 = 0.5 * t3 - 0.5 * t2;
+
+        double x = p0.getX() * f0 + p1.getX() * f1 + p2.getX() * f2 + p3.getX() * f3;
+        double y = p0.getY() * f0 + p1.getY() * f1 + p2.getY() * f2 + p3.getY() * f3;
+        double z = p0.getZ() * f0 + p1.getZ() * f1 + p2.getZ() * f2 + p3.getZ() * f3;
         
+        // Linear interpolation for rotation with wrap
         float diffYaw = toYaw - fromYaw;
         while (diffYaw < -180) diffYaw += 360;
         while (diffYaw > 180) diffYaw -= 360;
         float yaw = fromYaw + diffYaw * t;
         
         float pitch = fromPitch + (toPitch - fromPitch) * t;
-        return new Location(from.getWorld(), x, y, z, yaw, pitch);
+        return new Location(p1.getWorld(), x, y, z, yaw, pitch);
     }
 
     private float applyEasing(float t, CameraPoint.EasingType easing) {

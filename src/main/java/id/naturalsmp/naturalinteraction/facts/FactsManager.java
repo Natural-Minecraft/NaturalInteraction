@@ -11,6 +11,8 @@ import java.io.FileWriter;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 
 /**
  * Unified player state store — replaces TagTracker and CompletionTracker.
@@ -33,6 +35,9 @@ public class FactsManager {
 
     // Thread-safe in-memory store: UUID → {factKey → value (as String)}
     private final Map<UUID, Map<String, String>> data = new ConcurrentHashMap<>();
+    
+    // Cached names of players who have facts, for tab completion
+    private final Set<String> knownPlayerNames = Collections.synchronizedSet(new HashSet<>());
 
     // Debounce: avoid saving every single set() call when many facts change at once
     private final Set<UUID> pendingSaves = Collections.synchronizedSet(new HashSet<>());
@@ -153,6 +158,11 @@ public class FactsManager {
     public Map<String, String> getAll(UUID player) {
         return Collections.unmodifiableMap(data.getOrDefault(player, Collections.emptyMap()));
     }
+    
+    /** Returns all known player names who have facts (for tab completion). */
+    public Set<String> getKnownPlayerNames() {
+        return knownPlayerNames;
+    }
 
     // ─── Internal ─────────────────────────────────────────────────────────────
 
@@ -163,6 +173,8 @@ public class FactsManager {
 
     private void setRaw(UUID player, String key, String value) {
         data.computeIfAbsent(player, k -> new ConcurrentHashMap<>()).put(key, value);
+        OfflinePlayer op = Bukkit.getOfflinePlayer(player);
+        if (op.getName() != null) knownPlayerNames.add(op.getName());
         scheduleAsyncSave(player);
     }
 
@@ -200,6 +212,15 @@ public class FactsManager {
                 plugin.getLogger().warning("[Facts] Failed to load: " + file.getName() + " — " + e.getMessage());
             }
         }
+        
+        // Cache known names asynchronously to prevent startup lag
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            for (UUID uuid : data.keySet()) {
+                OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
+                if (op.getName() != null) knownPlayerNames.add(op.getName());
+            }
+        });
+        
         plugin.getLogger().info("[Facts] Loaded facts for " + loaded + " players.");
     }
 

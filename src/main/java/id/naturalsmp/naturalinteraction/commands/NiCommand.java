@@ -380,7 +380,10 @@ public class NiCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase()) {
             case "facts" -> {
                 if (args.length == 2) return List.of("set", "reset");
-                return onlinePlayers(args[args.length - 1]);
+                String prefix = args[args.length - 1].toLowerCase();
+                Set<String> known = new HashSet<>(plugin.getFactsManager().getKnownPlayerNames());
+                Bukkit.getOnlinePlayers().forEach(p -> known.add(p.getName()));
+                return known.stream().filter(n -> n.toLowerCase().startsWith(prefix)).sorted().collect(Collectors.toList());
             }
             case "trigger", "fire" -> {
                 if (args.length == 2) return new ArrayList<>(plugin.getInteractionManager().getInteractionIds());
