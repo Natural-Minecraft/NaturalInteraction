@@ -174,26 +174,29 @@ public class NiCommand implements CommandExecutor, TabCompleter {
 
         // facts reset [player]
         if (args.length >= 2 && args[1].equalsIgnoreCase("reset")) {
-            Player t = resolvePlayer(sender, args, 2);
+            String[] nameOut = new String[1];
+            UUID t = resolveOfflineUUID(sender, args, 2, nameOut);
             if (t == null) return;
-            fm.resetAll(t.getUniqueId());
-            sender.sendMessage(ChatUtils.toComponent("&a✔ Facts reset for &e" + t.getName()));
+            fm.resetAll(t);
+            sender.sendMessage(ChatUtils.toComponent("&a✔ Facts reset for &e" + nameOut[0]));
             return;
         }
         // facts set <key> <value> [player]
         if (args.length >= 4 && args[1].equalsIgnoreCase("set")) {
-            Player t = resolvePlayer(sender, args, 4);
+            String[] nameOut = new String[1];
+            UUID t = resolveOfflineUUID(sender, args, 4, nameOut);
             if (t == null) return;
-            fm.setString(t.getUniqueId(), args[2], args[3]);
+            fm.setString(t, args[2], args[3]);
             sender.sendMessage(ChatUtils.toComponent("&a✔ &e" + args[2] + " &a= &f" + args[3]
-                    + " &afor &e" + t.getName()));
+                    + " &afor &e" + nameOut[0]));
             return;
         }
         // facts [player] → view
-        Player t = resolvePlayer(sender, args, 1);
+        String[] nameOut = new String[1];
+        UUID t = resolveOfflineUUID(sender, args, 1, nameOut);
         if (t == null) return;
-        Map<String, String> facts = fm.getAll(t.getUniqueId());
-        sender.sendMessage(ChatUtils.toComponent("&6--- Facts: &e" + t.getName()
+        Map<String, String> facts = fm.getAll(t);
+        sender.sendMessage(ChatUtils.toComponent("&6--- Facts: &e" + nameOut[0]
                 + " &6(" + facts.size() + ") ---"));
         if (facts.isEmpty()) {
             sender.sendMessage(ChatUtils.toComponent("  &7(tidak ada facts)"));
@@ -414,6 +417,30 @@ public class NiCommand implements CommandExecutor, TabCompleter {
             return p;
         }
         if (sender instanceof Player p) return p;
+        sender.sendMessage(ChatUtils.toComponent("&cHarus specify player dari console."));
+        return null;
+    }
+
+    private UUID resolveOfflineUUID(CommandSender sender, String[] args, int argIndex, String[] nameOut) {
+        if (args.length > argIndex) {
+            String name = args[argIndex];
+            Player p = Bukkit.getPlayer(name);
+            if (p != null) {
+                if (nameOut != null) nameOut[0] = p.getName();
+                return p.getUniqueId();
+            }
+            org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayer(name);
+            if (op != null && op.hasPlayedBefore()) {
+                if (nameOut != null) nameOut[0] = op.getName();
+                return op.getUniqueId();
+            }
+            sender.sendMessage(ChatUtils.toComponent("&cPlayer tidak ditemukan (baik online maupun offline): &f" + name));
+            return null;
+        }
+        if (sender instanceof Player p) {
+            if (nameOut != null) nameOut[0] = p.getName();
+            return p.getUniqueId();
+        }
         sender.sendMessage(ChatUtils.toComponent("&cHarus specify player dari console."));
         return null;
     }
