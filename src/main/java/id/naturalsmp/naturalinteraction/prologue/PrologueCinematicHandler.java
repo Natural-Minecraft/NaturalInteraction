@@ -44,6 +44,7 @@ public class PrologueCinematicHandler implements Listener {
     private final double floatSpeed;
     private final Particle floatParticle;
     private final String prologueId;
+    private final String prePrologueCinematicId;
 
     // ─────────────────────────────────────────────────────────────────────────
 

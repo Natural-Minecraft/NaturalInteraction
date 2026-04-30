@@ -29,7 +29,7 @@ prologue:
     # Custom font character dari resource pack — gambar Title Screen kamu
     title-char: "\uE000"
     # Custom font character untuk Logo Natural saat transisi (fade black)
-    title-logo-char: "\uE001"
+    title-logo-char: ""
     # Total blok jarak melayang turun (ketinggian 30 blok)
     float-down-blocks: 30
     # Kecepatan turun (blok per tick) — lebih kecil = lebih lambat
