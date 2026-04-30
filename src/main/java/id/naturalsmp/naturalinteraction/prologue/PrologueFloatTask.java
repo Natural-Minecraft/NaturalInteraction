@@ -22,6 +22,7 @@ public class PrologueFloatTask extends BukkitRunnable {
     private final Particle particle;
     private final Runnable onComplete;
     private final NaturalInteraction plugin;
+    private final Location currentLoc;
 
     private int tick = 0;
     private final Random random = new Random();
@@ -33,6 +34,7 @@ public class PrologueFloatTask extends BukkitRunnable {
         this.totalTicks = totalTicks;
         this.particle = particle;
         this.onComplete = onComplete;
+        this.currentLoc = player.getLocation().clone();
     }
 
     @Override
@@ -44,23 +46,18 @@ public class PrologueFloatTask extends BukkitRunnable {
 
         tick++;
 
-        // Only move the player downwards manually if they are NOT in a cinematic
-        // If they are in a cinematic, the cinematic sequence itself controls their position.
-        Location loc = player.getLocation();
-        if (!plugin.getCinematicManager().getPlayer().isPlaying(player.getUniqueId())) {
-            loc.subtract(0, speed, 0);
-            player.teleport(loc);
-            // Zero out velocity so physics don't interfere
-            player.setVelocity(new Vector(0, 0, 0));
-        }
+        // Track a floating location instead of teleporting the player directly
+        // This makes particles float down gracefully in the center of the world
+        // even if the player's camera (Spectator) is flying around in a cinematic.
+        currentLoc.subtract(0, speed, 0);
 
-        // Spawn particles every 3 ticks in a sphere around the player
+        // Spawn particles every 3 ticks in a sphere around the floating location
         if (tick % 3 == 0) {
             for (int i = 0; i < 6; i++) {
                 double rx = (random.nextDouble() - 0.5) * 2.0;
                 double ry = random.nextDouble() * 2.0;
                 double rz = (random.nextDouble() - 0.5) * 2.0;
-                Location pLoc = loc.clone().add(rx, ry, rz);
+                Location pLoc = currentLoc.clone().add(rx, ry, rz);
                 player.getWorld().spawnParticle(particle, pLoc, 1, 0, 0, 0, 0);
             }
         }
@@ -71,13 +68,16 @@ public class PrologueFloatTask extends BukkitRunnable {
                 double rx = (random.nextDouble() - 0.5) * 1.5;
                 double ry = random.nextDouble() * 2.5;
                 double rz = (random.nextDouble() - 0.5) * 1.5;
-                player.getWorld().spawnParticle(Particle.HEART, loc.clone().add(rx, ry, rz), 1, 0, 0, 0, 0);
+                player.getWorld().spawnParticle(Particle.HEART, currentLoc.clone().add(rx, ry, rz), 1, 0, 0, 0, 0);
             }
         }
 
         // When done, trigger Phase 3
         if (tick >= totalTicks) {
             cancel();
+            // Teleport player to the final floating location so they don't fall
+            player.teleport(currentLoc);
+            player.setVelocity(new Vector(0, 0, 0));
             onComplete.run();
         }
     }

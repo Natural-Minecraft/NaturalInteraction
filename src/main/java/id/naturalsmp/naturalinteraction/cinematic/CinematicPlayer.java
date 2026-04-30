@@ -193,7 +193,7 @@ public class CinematicPlayer {
         }
         if (player.isOnline()) {
             player.setGameMode(active.originalMode);
-            player.teleport(active.originalLocation);
+            // Do NOT restore original location - leave player at the cinematic's end point
             player.removePotionEffect(PotionEffectType.BLINDNESS);
         }
     }
