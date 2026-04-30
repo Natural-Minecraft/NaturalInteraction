@@ -138,6 +138,23 @@ public class CinematicManager implements Listener {
         }
     }
 
+    @EventHandler
+    public void onInteract(org.bukkit.event.player.PlayerInteractEvent event) {
+        if (event.getAction().name().startsWith("RIGHT_CLICK")) {
+            CinematicEditorSession session = editors.get(event.getPlayer().getUniqueId());
+            if (session != null) {
+                event.setCancelled(true);
+                java.util.List<CameraPoint> points = session.getSequence().getPoints();
+                if (!points.isEmpty()) {
+                    points.remove(points.size() - 1);
+                    event.getPlayer().sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&c✖ Titik kamera terakhir dihapus."));
+                } else {
+                    event.getPlayer().sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&c✖ Tidak ada titik yang bisa dihapus."));
+                }
+            }
+        }
+    }
+
     // ─── Parsing ──────────────────────────────────────────────────────────────
 
     private CinematicSequence parseSequence(JsonObject json) {

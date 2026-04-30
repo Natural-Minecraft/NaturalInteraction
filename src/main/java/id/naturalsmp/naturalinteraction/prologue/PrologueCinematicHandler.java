@@ -83,9 +83,12 @@ public class PrologueCinematicHandler implements Listener {
         active.add(player.getUniqueId());
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
-        // Freeze player: no movement, no jump
+        // Freeze player: no movement, no jump, and prevent falling
         player.setGameMode(GameMode.ADVENTURE);
-        player.setAllowFlight(false);
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        player.setGravity(false);
+        player.setVelocity(new org.bukkit.util.Vector(0, 0, 0));
         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 254, false, false, false));
         player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 250, false, false, false));
         player.sendActionBar(Component.empty());
@@ -170,6 +173,12 @@ public class PrologueCinematicHandler implements Listener {
             @Override
             public void run() {
                 if (!player.isOnline()) { cleanup(false); return; }
+                
+                // Reset player state
+                player.setAllowFlight(false);
+                player.setFlying(false);
+                player.setGravity(true);
+                
                 plugin.getInteractionManager().startInteraction(player, prologueId);
                 cleanup(true);
             }
@@ -186,6 +195,8 @@ public class PrologueCinematicHandler implements Listener {
             player.removePotionEffect(PotionEffectType.SLOWNESS);
             player.removePotionEffect(PotionEffectType.JUMP_BOOST);
             player.setAllowFlight(false);
+            player.setFlying(false);
+            player.setGravity(true);
             player.clearTitle();
         }
     }

@@ -34,13 +34,14 @@ public class CinematicEditorSession {
         player.sendMessage(ChatUtils.toComponent("&a✔ Memasuki Editor Cinematic: &e" + sequence.getId()));
         player.sendMessage(ChatUtils.toComponent("&7- Terbang ke lokasi kamera."));
         player.sendMessage(ChatUtils.toComponent("&7- Tekan &e[F] &7(Swap Item) untuk menyimpan titik kamera."));
+        player.sendMessage(ChatUtils.toComponent("&7- &e[Klik Kanan] &7untuk menghapus titik terakhir."));
         player.sendMessage(ChatUtils.toComponent("&7- Ketik &e/ni cinematic save &7untuk keluar dan menyimpan."));
 
         actionbarTask = new BukkitRunnable() {
             @Override
             public void run() {
                 if (!player.isOnline()) { cancel(); return; }
-                player.sendActionBar(ChatUtils.toComponent("&6Editing &e" + sequence.getId() + " &8| &7Titik: &a" + sequence.getPoints().size() + " &8| &eTekan [F] tambah titik"));
+                player.sendActionBar(ChatUtils.toComponent("&6Editing &e" + sequence.getId() + " &8| &7Titik: &a" + sequence.getPoints().size() + " &8| &e[F] &7Tambah &8| &e[Klik Kanan] &7Hapus"));
             }
         };
         actionbarTask.runTaskTimer(plugin, 0L, 20L);
