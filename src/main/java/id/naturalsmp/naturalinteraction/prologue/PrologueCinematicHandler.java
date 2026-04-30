@@ -138,7 +138,14 @@ public class PrologueCinematicHandler implements Listener {
         player.setAllowFlight(true);
         player.setFlying(true);
 
-        // Phase 2: float down
+        // Play the "pre-prologue" cinematic camera simultaneously
+        id.naturalsmp.naturalinteraction.cinematic.CinematicSequence seq =
+                plugin.getCinematicManager().getSequence("pre-prologue");
+        if (seq != null) {
+            plugin.getCinematicManager().getPlayer().play(player, seq);
+        }
+
+        // Phase 2: float down 30 blocks
         int totalTicks = (int) Math.round(floatBlocks / floatSpeed);
         new PrologueFloatTask(player, floatSpeed, totalTicks, floatParticle, this::triggerScreenEffect)
                 .runTaskTimer(plugin, 2L, 1L);

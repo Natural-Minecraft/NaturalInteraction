@@ -27,8 +27,8 @@ prologue:
     # Custom font character dari resource pack — gambar Title Screen kamu
     # (teks sudah ada di dalam gambar, tidak butuh subtitle)
     title-char: "\uE000"
-    # Total blok jarak melayang turun (dari Y=226 ke Y=201)
-    float-down-blocks: 25
+    # Total blok jarak melayang turun (ketinggian 30 blok)
+    float-down-blocks: 30
     # Kecepatan turun (blok per tick) — lebih kecil = lebih lambat
     float-down-speed: 0.04
     # Particle saat melayang turun (Bukkit Particle name)
