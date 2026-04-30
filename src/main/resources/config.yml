@@ -15,6 +15,34 @@ prologue:
   npc-hologram-default: "§8§l????"
   npc-hologram-exclamation: "§b§l!"
 
+  # Koordinat langit tempat pemain muncul pertama kali
+  sky-spawn:
+    x: 0.5
+    y: 200.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 30.0
+
+  # Koordinat NPC Dewi / NPC Prolog tujuan setelah cinematic
+  dewi-location:
+    x: 100.0
+    y: 64.0
+    z: 100.0
+    world: "story_sky"
+    yaw: 180.0
+    pitch: 0.0
+
+  cinematic:
+    # Custom font character dari resource pack — gambar Title Screen kamu
+    # (teks sudah ada di dalam gambar, tidak butuh subtitle)
+    title-char: "\uE000"
+    # Total blok jarak melayang turun pada Phase 2
+    float-down-blocks: 25
+    # Kecepatan turun (blok per tick) — lebih kecil = lebih lambat
+    float-down-speed: 0.04
+    # Particle saat melayang turun (Bukkit Particle name)
+    float-particle: "TOTEM_OF_UNDYING"
+
 # Plugin command integration
 plugins:
   multiverse-teleport-command: "mvtp"

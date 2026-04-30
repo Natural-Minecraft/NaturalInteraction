@@ -61,23 +61,16 @@ public class PrologueJoinListener implements Listener {
 
                 String prologueId = PluginConfig.getPrologueInteractionId(plugin);
                 if (!tracker.hasCompleted(player.getUniqueId(), prologueId)) {
-                    // Player hasn't done prologue — save data and teleport to story_sky
 
-                    // Only save if not already in story_sky AND no existing save
-                    // (prevent overwriting good save with corrupted data on re-join)
+                    // Save player's real location & inventory before prologue
                     String prologueWorld = PluginConfig.getPrologueWorld(plugin);
                     if (!player.getWorld().getName().equalsIgnoreCase(prologueWorld)
                             && !hasSavedData(player.getUniqueId())) {
                         savePlayerData(player);
                     }
 
-                    // Teleport to prologue world via Multiverse
-                    String mvCmd = PluginConfig.getMultiverseTeleportCommand(plugin);
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                            mvCmd + " " + player.getName() + " " + prologueWorld);
-
-                    player.sendMessage(Component.text("✦ ", NamedTextColor.GOLD)
-                            .append(Component.text("Kamu harus menyelesaikan prologue terlebih dahulu!", NamedTextColor.YELLOW)));
+                    // Launch the Pre-Prologue cinematic (handles teleport, title screen, float-down, and trigger)
+                    id.naturalsmp.naturalinteraction.prologue.PrologueCinematicHandler.start(plugin, player);
                 }
             }
         }.runTaskLater(plugin, 20L); // 1 second delay
