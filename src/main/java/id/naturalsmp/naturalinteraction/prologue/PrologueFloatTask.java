@@ -7,7 +7,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
 import java.util.Random;
-import java.util.function.Runnable;
 
 /**
  * Phase 2 — Float the player slowly downward while spawning healing-aura particles.
