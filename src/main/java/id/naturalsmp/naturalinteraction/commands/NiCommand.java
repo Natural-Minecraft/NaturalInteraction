@@ -42,7 +42,7 @@ public class NiCommand implements CommandExecutor, TabCompleter {
     // New v2 subcommand names
     private static final Set<String> V2_SUBS = Set.of(
             "reload", "clearchat", "connect", "facts", "trigger",
-            "fire", "cinematic", "quest", "untrack", "manifest", "assets");
+            "fire", "cinematic", "quest", "untrack", "manifest", "assets", "test-pre-prologue");
 
     public NiCommand(NaturalInteraction plugin) {
         this.plugin = plugin;
@@ -106,8 +106,19 @@ public class NiCommand implements CommandExecutor, TabCompleter {
             case "untrack"   -> handleUntrack(sender, args);
             case "manifest"  -> handleManifest(sender, args);
             case "assets"    -> handleAssets(sender, args);
+            case "test-pre-prologue" -> handleTestPrePrologue(sender, args);
         }
         return true;
+    }
+
+    private void handleTestPrePrologue(CommandSender sender, String[] args) {
+        if (!sender.hasPermission(PERM_ADMIN)) { noPermission(sender); return; }
+        Player target = resolvePlayer(sender, args, 1);
+        if (target == null) return;
+        id.naturalsmp.naturalinteraction.prologue.PrologueCinematicHandler.start(plugin, target);
+        if (!target.equals(sender)) {
+            sender.sendMessage(ChatUtils.toComponent("&a✔ Memulai pre-prologue untuk &e" + target.getName()));
+        }
     }
 
     private void handleReload(CommandSender sender) {
@@ -372,7 +383,7 @@ public class NiCommand implements CommandExecutor, TabCompleter {
                 if (args.length == 2) return new ArrayList<>(plugin.getInteractionManager().getInteractionIds());
                 return onlinePlayers(args[args.length - 1]);
             }
-            case "clearchat", "untrack" -> { return onlinePlayers(args[args.length - 1]); }
+            case "clearchat", "untrack", "test-pre-prologue" -> { return onlinePlayers(args[args.length - 1]); }
             case "cinematic" -> {
                 if (args.length == 2) return List.of("start", "stop", "edit", "save");
                 if (args.length == 3 && (args[1].equalsIgnoreCase("start") || args[1].equalsIgnoreCase("edit")))
