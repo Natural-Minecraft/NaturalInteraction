@@ -18,13 +18,22 @@ import java.util.List;
 public class PointEditorGUI extends GUI {
 
     private final CinematicSequence sequence;
+    private int editIndex = -1;
     private int durationTicks = 60;
     private CameraPoint.EasingType easing = CameraPoint.EasingType.SMOOTH;
     private String subtitleText = "";
 
-    public PointEditorGUI(NaturalInteraction plugin, Player player, CinematicSequence sequence) {
+    public PointEditorGUI(NaturalInteraction plugin, Player player, CinematicSequence sequence, int editIndex) {
         super(plugin, player, 27, "&8Pengaturan Titik Kamera");
         this.sequence = sequence;
+        this.editIndex = editIndex;
+
+        if (editIndex >= 0 && editIndex < sequence.getPoints().size()) {
+            CameraPoint pt = sequence.getPoints().get(editIndex);
+            this.durationTicks = pt.getDurationTicks();
+            this.easing = pt.getEasing();
+            this.subtitleText = pt.getText() == null ? "" : pt.getText();
+        }
     }
 
     @Override
@@ -76,10 +85,26 @@ public class PointEditorGUI extends GUI {
         // Save & Add
         ItemStack saveItem = new ItemStack(Material.EMERALD_BLOCK);
         ItemMeta sm = saveItem.getItemMeta();
-        sm.displayName(ChatUtils.toComponent("&a✔ Simpan Titik Ini"));
-        sm.lore(List.of(ChatUtils.toComponent("&7Masukkan titik ini ke cinematic.")));
+        sm.displayName(ChatUtils.toComponent("&a✔ Simpan Titik"));
+        sm.lore(List.of(ChatUtils.toComponent(editIndex >= 0 ? "&7Simpan perubahan pada titik ini." : "&7Masukkan titik ini ke cinematic.")));
         saveItem.setItemMeta(sm);
         inventory.setItem(26, saveItem);
+
+        if (editIndex >= 0) {
+            ItemStack updateLocItem = new ItemStack(Material.COMPASS);
+            ItemMeta um = updateLocItem.getItemMeta();
+            um.displayName(ChatUtils.toComponent("&bPerbarui Posisi ke Sini"));
+            um.lore(List.of(ChatUtils.toComponent("&7Ubah lokasi titik ini menjadi lokasimu saat ini.")));
+            updateLocItem.setItemMeta(um);
+            inventory.setItem(18, updateLocItem);
+
+            ItemStack deleteItem = new ItemStack(Material.BARRIER);
+            ItemMeta delm = deleteItem.getItemMeta();
+            delm.displayName(ChatUtils.toComponent("&cHapus Titik Ini"));
+            delm.lore(List.of(ChatUtils.toComponent("&7Hapus titik ini secara permanen dari cinematic.")));
+            deleteItem.setItemMeta(delm);
+            inventory.setItem(8, deleteItem);
+        }
     }
 
     @Override
@@ -115,12 +140,37 @@ public class PointEditorGUI extends GUI {
                 }
             }, plugin);
         }
-        else if (slot == 26) { // Save
-            sequence.addPoint(new CameraPoint(
+        else if (slot == 8 && editIndex >= 0) { // Delete
+            sequence.getPoints().remove(editIndex);
+            player.sendMessage(ChatUtils.toComponent("&a✔ Titik ke-" + (editIndex + 1) + " dihapus."));
+            player.closeInventory();
+        }
+        else if (slot == 18 && editIndex >= 0) { // Update location
+            CameraPoint pt = sequence.getPoints().get(editIndex);
+            CameraPoint updated = new CameraPoint(
                     player.getLocation(), player.getLocation().getYaw(), player.getLocation().getPitch(),
-                    durationTicks, easing, subtitleText
-            ));
-            player.sendMessage(ChatUtils.toComponent("&a✔ Titik kamera ke-" + sequence.getPoints().size() + " disimpan."));
+                    pt.getDurationTicks(), pt.getEasing(), pt.getText()
+            );
+            sequence.getPoints().set(editIndex, updated);
+            player.sendMessage(ChatUtils.toComponent("&a✔ Posisi titik ke-" + (editIndex + 1) + " diperbarui ke lokasimu saat ini."));
+            player.closeInventory();
+        }
+        else if (slot == 26) { // Save
+            Location loc = player.getLocation();
+            if (editIndex >= 0) {
+                loc = sequence.getPoints().get(editIndex).getLocation();
+                sequence.getPoints().set(editIndex, new CameraPoint(
+                        loc, loc.getYaw(), loc.getPitch(),
+                        durationTicks, easing, subtitleText
+                ));
+                player.sendMessage(ChatUtils.toComponent("&a✔ Titik kamera ke-" + (editIndex + 1) + " diperbarui."));
+            } else {
+                sequence.addPoint(new CameraPoint(
+                        loc, loc.getYaw(), loc.getPitch(),
+                        durationTicks, easing, subtitleText
+                ));
+                player.sendMessage(ChatUtils.toComponent("&a✔ Titik kamera ke-" + sequence.getPoints().size() + " disimpan."));
+            }
             player.closeInventory();
         }
     }

@@ -134,7 +134,7 @@ public class CinematicManager implements Listener {
         CinematicEditorSession session = editors.get(event.getPlayer().getUniqueId());
         if (session != null) {
             event.setCancelled(true);
-            new id.naturalsmp.naturalinteraction.gui.PointEditorGUI(plugin, event.getPlayer(), session.getSequence()).open();
+            new id.naturalsmp.naturalinteraction.gui.PointListGUI(plugin, event.getPlayer(), session.getSequence()).open();
         }
     }
 
@@ -151,6 +151,30 @@ public class CinematicManager implements Listener {
                 } else {
                     event.getPlayer().sendMessage(id.naturalsmp.naturalinteraction.utils.ChatUtils.toComponent("&c✖ Tidak ada titik yang bisa dihapus."));
                 }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onSneak(org.bukkit.event.player.PlayerToggleSneakEvent event) {
+        if (player.isPlaying(event.getPlayer().getUniqueId())) {
+            // Cancel sneak state change or force spectator target re-attach
+            // In vanilla, client detaches from spectator target when sneaking.
+            // We can't cancel the client's detach, so we re-attach them.
+            if (event.isSneaking()) {
+                event.setCancelled(true);
+                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                    player.reattach(event.getPlayer());
+                }, 1L);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onDismount(org.spigotmc.event.entity.EntityDismountEvent event) {
+        if (event.getEntity() instanceof org.bukkit.entity.Player p) {
+            if (player.isPlaying(p.getUniqueId())) {
+                event.setCancelled(true);
             }
         }
     }

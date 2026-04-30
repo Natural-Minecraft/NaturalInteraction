@@ -33,7 +33,8 @@ prologue:
     # Total blok jarak melayang turun (ketinggian 30 blok)
     float-down-blocks: 30
     # Kecepatan turun (blok per tick) — lebih kecil = lebih lambat
-    float-down-speed: 0.04
+    # 0.05 = 1 block per second (30 blocks = 30 seconds)
+    float-down-speed: 0.05
     # Particle saat melayang turun (Bukkit Particle name)
     float-particle: "TOTEM_OF_UNDYING"
 

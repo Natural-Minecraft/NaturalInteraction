@@ -203,7 +203,12 @@ public class CinematicPlayer {
         double x = from.getX() + (to.getX() - from.getX()) * t;
         double y = from.getY() + (to.getY() - from.getY()) * t;
         double z = from.getZ() + (to.getZ() - from.getZ()) * t;
-        float yaw = fromYaw + (toYaw - fromYaw) * t;
+        
+        float diffYaw = toYaw - fromYaw;
+        while (diffYaw < -180) diffYaw += 360;
+        while (diffYaw > 180) diffYaw -= 360;
+        float yaw = fromYaw + diffYaw * t;
+        
         float pitch = fromPitch + (toPitch - fromPitch) * t;
         return new Location(from.getWorld(), x, y, z, yaw, pitch);
     }
@@ -213,10 +218,26 @@ public class CinematicPlayer {
             case LINEAR -> t;
             case EASE_IN -> t * t;
             case EASE_OUT -> 1 - (1 - t) * (1 - t);
-            case EASE_IN_OUT -> t < 0.5f ? 2 * t * t : 1 - (float) Math.pow(-2 * t + 2, 2) / 2;
+            case EASE_IN_OUT -> {
+                if (t < 0.3333333f) yield 2.25f * t * t;
+                if (t < 0.6666667f) yield 1.5f * t - 0.25f;
+                float inv = 1 - t;
+                yield 1 - 2.25f * inv * inv;
+            }
             case SMOOTH -> (float) (3 * t * t - 2 * t * t * t); // Smoothstep
             case INSTANT -> 1.0f;
         };
+    }
+
+    public boolean isPlaying(UUID uuid) {
+        return activeCinematics.containsKey(uuid);
+    }
+
+    public void reattach(Player player) {
+        ActiveCinematic active = activeCinematics.get(player.getUniqueId());
+        if (active != null && active.mount != null && player.getGameMode() == GameMode.SPECTATOR) {
+            player.setSpectatorTarget(active.mount);
+        }
     }
 
     // ─── Inner ────────────────────────────────────────────────────────────────
