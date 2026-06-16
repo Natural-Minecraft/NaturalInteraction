@@ -12,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
@@ -44,7 +45,7 @@ public class PrologueJoinListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
@@ -52,28 +53,26 @@ public class PrologueJoinListener implements Listener {
         if (player.hasPermission("naturalsmp.admin") || player.hasPermission("naturalstory.bypass.prologue")) return;
 
         CompletionTracker tracker = plugin.getInteractionManager().getCompletionTracker();
+        String prologueId = PluginConfig.getPrologueInteractionId(plugin);
 
-        // Delay check by 1 second to let world load
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!player.isOnline()) return;
+        if (!tracker.hasCompleted(player.getUniqueId(), prologueId)) {
+            // Save player's real location & inventory before prologue immediately
+            String prologueWorld = PluginConfig.getPrologueWorld(plugin);
+            if (!player.getWorld().getName().equalsIgnoreCase(prologueWorld)
+                    && !hasSavedData(player.getUniqueId())) {
+                savePlayerData(player);
+            }
 
-                String prologueId = PluginConfig.getPrologueInteractionId(plugin);
-                if (!tracker.hasCompleted(player.getUniqueId(), prologueId)) {
-
-                    // Save player's real location & inventory before prologue
-                    String prologueWorld = PluginConfig.getPrologueWorld(plugin);
-                    if (!player.getWorld().getName().equalsIgnoreCase(prologueWorld)
-                            && !hasSavedData(player.getUniqueId())) {
-                        savePlayerData(player);
-                    }
-
+            // Delay cinematic start by 20 ticks to let world load
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!player.isOnline()) return;
                     // Launch the Pre-Prologue cinematic (handles teleport, title screen, float-down, and trigger)
                     id.naturalsmp.naturalinteraction.prologue.PrologueCinematicHandler.start(plugin, player);
                 }
-            }
-        }.runTaskLater(plugin, 20L); // 1 second delay
+            }.runTaskLater(plugin, 20L); // 1 second delay
+        }
     }
 
     /**
