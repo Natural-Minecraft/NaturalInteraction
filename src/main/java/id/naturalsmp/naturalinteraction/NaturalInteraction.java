@@ -111,7 +111,18 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
 
         getLogger().info(
-                ChatUtils.colorize("<gradient:#4facfe:#00f2fe>NaturalInteraction</gradient> <white>v"
+        Bukkit.getConsoleSender().sendMessage(
+                id.naturalsmp.naturalinteraction.utils.ChatUtils.colorize(
+                    "\n&a===============\n" +
+                    "&a _   _       _                  _     &e ___       _                      _   \n" +
+                    "&a| \ | | __ _| |_ _   _ _ __ __ _| |   &e|_ _|_ __ | |_ ___ _ __ __ _  ___| |_ \n" +
+                    "&a|  \| |/ _` | __| | | | '__/ _` | |   &e  | || '_ \| __/ _ \\ '__/ _` |/ __| __|\n" +
+                    "&a| |\  | (_| | |_| |_| | | | (_| | |   &e  | || | | | ||  __/ | | (_| | (__| |_ \n" +
+                    "&a|_| \_|\__,_|\__|\__,_|_|  \__,_|_|   &e|___|_| |_|\__\___|_|  \__,_|\___|\__|\n" +
+                    "       >> &6NaturalInteraction v" + getDescription().getVersion() + " Enabled! <<\n" +
+                    "&a===============\n"
+                )
+        );
                         + getDescription().getVersion() + " has been enabled!"));
     }
 
