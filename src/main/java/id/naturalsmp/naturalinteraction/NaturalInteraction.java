@@ -110,7 +110,6 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
         // Register this class as listener for PlayerQuitEvent (manifest cleanup)
         getServer().getPluginManager().registerEvents(this, this);
 
-        getLogger().info(
         Bukkit.getConsoleSender().sendMessage(
                 id.naturalsmp.naturalinteraction.utils.ChatUtils.colorize(
                     "\n&a===============\n" +
@@ -123,7 +122,6 @@ public final class NaturalInteraction extends JavaPlugin implements Listener {
                     "&a===============\n"
                 )
         );
-                        + getDescription().getVersion() + " has been enabled!"));
     }
 
     @EventHandler
